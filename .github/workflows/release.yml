@@ -1,0 +1,79 @@
+# Push a tag like v1.0.1 -> builds the Windows app and the Mac package, tests both, and publishes them as a GitHub Release.
+# The app checks this Release page and offers the update to everyone (Mac and Windows) at the same time.
+name: Release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Version matches tag
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          V=$(python -c "import re;print(re.search(r\"__version__ = '([^']+)'\",open('receipt_organizer/__init__.py').read()).group(1))")
+          [ "v$V" = "${GITHUB_REF_NAME}" ] || { echo "__version__ $V does not match tag ${GITHUB_REF_NAME}"; exit 1; }
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-windows.txt pyinstaller
+      - name: Build ReceiptOrganizer.exe
+        run: >
+          pyinstaller --noconfirm --windowed --name ReceiptOrganizer --icon assets/icon.ico
+          --add-data "receipt_organizer/ui;receipt_organizer/ui" --add-data "entities.txt;."
+          --collect-all webview --collect-all winrt --hidden-import clr run_app.py
+      - name: Self-test the built app
+        shell: bash
+        env: {RO_SELFTEST_OPTIONAL: ocr}
+        run: |
+          ./dist/ReceiptOrganizer/ReceiptOrganizer.exe --selftest selftest.txt; code=$?
+          cat selftest.txt; exit $code
+      - name: Zip
+        shell: pwsh
+        run: |
+          $v = python -c "import receipt_organizer as r;print(r.__version__)"
+          Compress-Archive -Path dist/ReceiptOrganizer -DestinationPath "ReceiptOrganizer-Windows-$v.zip"
+      - uses: actions/upload-artifact@v4
+        with: {name: windows, path: 'ReceiptOrganizer-Windows-*.zip'}
+
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Self-test (Apple Vision OCR, report, window library)
+        run: |
+          pip install -r requirements-mac.txt
+          python -m receipt_organizer.gui --selftest selftest.txt; code=$?; cat selftest.txt; exit $code
+      - name: Package
+        run: |
+          V=$(python -c "import receipt_organizer as r;print(r.__version__)")
+          mkdir -p pkg/ReceiptOrganizer
+          cp -R receipt_organizer mac assets requirements-mac.txt entities.txt README.md run_app.py pkg/ReceiptOrganizer/
+          find pkg -name __pycache__ -prune -exec rm -rf {} +
+          (cd pkg && zip -qr "../ReceiptOrganizer-Mac-$V.zip" ReceiptOrganizer)
+      - uses: actions/upload-artifact@v4
+        with: {name: mac, path: 'ReceiptOrganizer-Mac-*.zip'}
+
+  release:
+    needs: [windows, mac]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: {path: out, merge-multiple: true}
+      - name: Publish release
+        env: {GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'}
+        run: |
+          NOTES=$(awk "/^## ${GITHUB_REF_NAME#v}/{f=1;next}/^## /{f=0}f" CHANGELOG.md)
+          gh release create "${GITHUB_REF_NAME}" out/*.zip --title "Receipt Organizer ${GITHUB_REF_NAME#v}" --notes "${NOTES:-See CHANGELOG.md}"

@@ -1,0 +1,13 @@
+# Windows: bundled into ReceiptOrganizer.exe by the automatic build (users do not install these)
+opencv-python-headless>=4.8
+numpy>=1.24
+pywebview>=5
+openpyxl>=3.1
+pypdf>=4
+winrt-runtime>=2
+winrt-Windows.Media.Ocr>=2
+winrt-Windows.Graphics.Imaging>=2
+winrt-Windows.Storage.Streams>=2
+winrt-Windows.Globalization>=2
+winrt-Windows.Foundation>=2
+winrt-Windows.Foundation.Collections>=2

@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec
+.DS_Store
+# personal data never goes to GitHub
+t_in/
+t_out/
+*.zip
+backup_*
+tests/regression.py
+selftest.txt

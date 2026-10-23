@@ -1,0 +1,8 @@
+# Mac: installed into a private .venv by mac/setup_mac.command
+opencv-python-headless>=4.8
+numpy>=1.24
+pyobjc-framework-Vision>=10
+pyobjc-framework-Quartz>=10
+pywebview>=5
+openpyxl>=3.1
+pypdf>=4

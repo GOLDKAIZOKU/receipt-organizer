@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>单据整理</title>
+<style>
+:root{--ink:#1e2a31;--mute:#667482;--paper:#f1f3f0;--surface:#fff;--line:#dde2e0;--accent:#0e6b75;--accent-ink:#fff;--ok:#2f7d5b;--warn:#a86a10;--bad:#b3433b;--mark:#f2d14b;--bed:#dfe4e9;--sel:#e6f1f2;
+--font:ui-sans-serif,-apple-system,"SF Pro Text","PingFang SC","Helvetica Neue",system-ui,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--ink:#e6ebf0;--mute:#93a1ae;--paper:#12171c;--surface:#1a2128;--line:#2a343d;--accent:#5cc0cc;--accent-ink:#06262a;--ok:#6fcf9f;--warn:#e3a94f;--bad:#f08b83;--bed:#0f1418;--sel:#1f2e33}}
+*{box-sizing:border-box}html,body{height:100%}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 var(--font);-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+.app{display:grid;grid-template-columns:216px 1fr;height:100%}
+nav{background:var(--surface);border-right:1px solid var(--line);padding:18px 12px;display:flex;flex-direction:column;gap:4px;min-height:0;overflow:auto}
+nav h1{font-size:17px;margin:2px 10px 14px;font-weight:650}
+nav button{text-align:left;border:0;background:none;padding:9px 12px;border-radius:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;color:var(--ink)}
+nav button:hover{background:var(--paper)}nav button[aria-current=true]{background:var(--sel);color:var(--accent);font-weight:600}
+nav em{font-style:normal;font-size:12px;background:var(--bad);color:#fff;border-radius:10px;padding:0 7px;min-width:20px;text-align:center}nav em:empty{display:none}
+nav .where{margin-top:auto;padding:10px;font-size:12px;color:var(--mute);word-break:break-all}
+.content{min-width:0;min-height:0;display:grid;grid-template-rows:1fr}.content>[hidden]{display:none!important}
+#page{overflow:auto;padding:30px 40px 60px}#page h2{font-size:22px;margin:0 0 4px}#page .sub{color:var(--mute);margin:0 0 22px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:26px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:10px;align-content:start}
+.card h3{margin:0;font-size:16px}.card p{margin:0;color:var(--mute);font-size:13.5px}.card .btn{justify-self:start}
+.card.big{border-color:var(--accent)}
+table.t{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+table.t th,table.t td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--line)}table.t th{font-size:12.5px;color:var(--mute);font-weight:600}
+table.t td.n,table.t th.n{text-align:right;font-variant-numeric:tabular-nums}table.t tr.go{cursor:pointer}table.t tr.go:hover{background:var(--sel)}
+.search{margin:0 0 12px}.search input{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.chip{display:inline-flex;gap:8px;align-items:center;background:var(--sel);border-radius:16px;padding:4px 6px 4px 12px;font-size:13px;margin-bottom:10px}.chip button{border:0;background:none;cursor:pointer;color:var(--mute)}
+.ent{margin:0 0 22px}.ent h3{margin:0 0 8px;font-size:16px}.mon{display:flex;flex-wrap:wrap;gap:8px}
+.mon button{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 12px;cursor:pointer;text-align:left}.mon button:hover{border-color:var(--accent)}.mon small{display:block;color:var(--mute)}
+nav .m,.back{display:none}
+.rfsh{margin:10px 6px 0;border:1px solid var(--line)!important;background:var(--surface)!important;justify-content:center!important}.stale{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:60;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.18);max-width:92vw;background:var(--mark);color:#1e2a31;padding:8px 14px;font-size:13.5px;display:flex;gap:12px;align-items:center}.stale[hidden]{display:none}
+.langsw{display:flex;gap:4px;margin:14px 6px 0}.langsw button{flex:1;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 0;cursor:pointer;font-size:13px}.langsw button[aria-pressed=true]{background:var(--sel);color:var(--accent);border-color:var(--accent);font-weight:600}
+.cardlang{display:flex;gap:8px}.cardlang button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 16px;cursor:pointer}.cardlang button[aria-pressed=true]{background:var(--sel);color:var(--accent);border-color:var(--accent);font-weight:600}
+@media (max-width:760px){
+ .app{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}.content{order:1}nav{order:2;flex-direction:row;border-right:0;border-top:1px solid var(--line);padding:4px 6px calc(4px + env(safe-area-inset-bottom));gap:2px;overflow:visible}
+ nav h1,nav .where,nav .d,.langsw,.rfsh{display:none}nav .m{display:inline}nav button{flex:1;justify-content:center;gap:4px;padding:11px 2px;font-size:13px}
+ #page{padding:18px 16px 30px}#page h2{font-size:20px}.cards{grid-template-columns:1fr}
+ main{grid-template-columns:1fr}main aside{display:none;border-left:0}main.md aside{display:block}main.md .list{display:none}
+ .list{padding:14px 14px 30px}.summary{gap:18px}.summary b{font-size:22px}
+ .pane{grid-template-rows:minmax(220px,42vh) 1fr}.back{display:inline-block;justify-self:start}
+ .pane,.form,#detail{min-width:0;grid-template-columns:minmax(0,1fr)}.form{padding:14px 16px 40px}.form .two{grid-template-columns:minmax(0,1fr)}.hint{display:none}
+ #detail .vtools{flex-wrap:nowrap;overflow:hidden}.vtools button{white-space:nowrap;padding:4px 8px;min-width:0}.vtools [data-a=one]{display:none}.read{grid-template-columns:auto minmax(0,1fr)}
+ input,select,textarea{font-size:16px}.mon button{flex:1 1 140px}table.t th,table.t td{padding:9px 10px}
+}
+.addent{display:flex;gap:6px}.addent input{flex:1;min-width:0}.snap{margin:6px 0 0;border:1px solid var(--line);border-radius:6px;background:var(--surface);overflow:hidden}.snap img{display:block;width:100%;max-height:74px;object-fit:contain;object-position:left center;background:var(--surface)}
+.snap.flag{border-color:var(--mark);box-shadow:inset 0 -4px 0 var(--mark)}.snap small{display:block;padding:2px 8px;font-size:11.5px;color:var(--mute);border-top:1px solid var(--line)}
+.f{display:grid;gap:0;align-content:start}input[type=date],#f-t{font-variant-numeric:tabular-nums}#f-t{text-align:right}
+@media (prefers-reduced-motion:no-preference){.snap.flag{animation:mk .5s ease-out}@keyframes mk{from{box-shadow:inset 0 0 0 var(--mark)}}}
+.dlg{position:fixed;inset:0;background:rgba(20,30,36,.45);display:grid;place-items:center;z-index:50;padding:16px}.dlg>div{background:var(--surface);border-radius:14px;max-width:760px;width:100%;max-height:90vh;display:grid;grid-template-rows:auto auto 1fr auto;overflow:hidden}
+.dlg h3{margin:0;padding:16px 18px 0}.dlg p{margin:6px 18px 10px;color:var(--mute);font-size:13.5px}.pk{overflow:auto;padding:4px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;align-content:start}
+.pk button{position:relative;border:2px solid var(--line);background:var(--paper);border-radius:10px;padding:6px;cursor:pointer;text-align:left;display:grid;gap:4px}.pk button[aria-pressed=true]{border-color:var(--accent)}
+.pk img{width:100%;height:110px;object-fit:contain;object-position:top;background:#fff;border-radius:4px}.pk small{font-size:11px;color:var(--mute);word-break:break-all}
+.pk .n{position:absolute;top:6px;right:6px;background:var(--accent);color:var(--accent-ink);border-radius:50%;width:22px;height:22px;display:grid;place-items:center;font-size:12px;font-weight:700}
+.dlg .acts{display:flex;gap:8px;justify-content:flex-end;padding:12px 18px}
+.dlg.wide>div{max-width:min(1100px,96vw);max-height:96vh}.cr{overflow:auto;padding:4px 18px;display:grid;place-items:start center}.cr .st{position:relative;user-select:none;-webkit-user-select:none;cursor:crosshair;touch-action:none}.cr .st img{display:block;max-height:calc(96vh - 210px);max-width:100%;background:#fff;pointer-events:none}.cr .bx{position:absolute;border:3px solid var(--accent);background:rgba(40,120,140,.12);box-sizing:border-box}.cr .bx.lk{border-style:dashed;border-color:var(--mute);background:rgba(120,120,120,.12)}.cr .bx b{position:absolute;left:-3px;top:-3px;background:var(--accent);color:var(--accent-ink);font-size:12px;padding:1px 7px;border-radius:0 0 6px 0}.cr .bx.lk b{background:var(--mute)}.cr .bx button{position:absolute;right:-3px;top:-3px;width:26px;height:26px;border:0;border-radius:0 0 0 6px;background:var(--bad);color:#fff;font-size:15px;cursor:pointer;line-height:1}
+textarea{width:100%;min-height:110px;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font-size:15px}
+header{display:flex;align-items:center;gap:16px;padding:14px 24px;background:var(--surface);border-bottom:1px solid var(--line)}
+header h1{font-size:17px;margin:0;font-weight:650;letter-spacing:.01em}
+header .where{color:var(--mute);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.btn:focus-visible,input:focus-visible,select:focus-visible,.row:focus-visible,.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{display:grid;grid-template-columns:minmax(340px,.8fr) minmax(460px,1.2fr);min-height:0}
+.list{overflow:auto;padding:18px 24px 40px}
+.summary{display:flex;gap:28px;align-items:baseline;margin:0 0 14px}
+.summary b{font-size:26px;font-weight:650;font-variant-numeric:tabular-nums}.summary span{color:var(--mute);font-size:13px;display:block}
+.tabs{display:flex;gap:2px;margin-bottom:12px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
+.tab{white-space:nowrap;flex:none;background:none;border:0;padding:8px 10px;cursor:pointer;color:var(--mute);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab[aria-selected=true]{color:var(--ink);border-color:var(--accent);font-weight:600}
+.row{display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:center;padding:10px 12px;border-radius:10px;cursor:pointer;border:1px solid transparent}
+.row:hover{background:var(--surface)}.row[aria-selected=true]{background:var(--sel);border-color:var(--accent)}
+.row img{width:44px;height:56px;object-fit:cover;object-position:top;border-radius:4px;background:var(--bed);border:1px solid var(--line)}
+.row .m{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .s{color:var(--mute);font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--ok)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--bad)}.dot.hold{background:transparent;border:2px solid var(--mute);box-sizing:border-box}
+.amt{font-variant-numeric:tabular-nums;font-weight:650;text-align:right}.amt small{display:block;color:var(--mute);font-weight:400;font-size:12px}
+.empty{padding:60px 20px;text-align:center;color:var(--mute)}.empty h2{color:var(--ink);font-size:18px;margin:0 0 6px}
+aside{background:var(--surface);border-left:1px solid var(--line);overflow:auto}
+.bed{background:var(--bed);padding:20px;display:grid;place-items:center;max-height:46vh;overflow:auto}
+.bed img{max-width:100%;max-height:42vh;box-shadow:0 2px 14px rgba(0,0,0,.18);background:#fff}
+.form{padding:18px 22px 40px;display:grid;gap:14px}
+.why{border-left:3px solid var(--warn);background:color-mix(in srgb,var(--warn) 9%,transparent);padding:10px 12px;border-radius:0 8px 8px 0;font-size:14px}
+.why.fine{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 9%,transparent)}
+label{display:grid;gap:4px;font-size:13px;color:var(--mute)}
+input,select{padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font-size:15px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.read{font-size:13px;color:var(--mute);display:grid;grid-template-columns:auto 1fr;gap:2px 12px}.read b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.form .actions{position:sticky;bottom:0;z-index:3;background:var(--surface);margin:0 -22px;padding:12px 22px;border-top:1px solid var(--line);box-shadow:0 -6px 14px rgba(0,0,0,.06)}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:60}.toast.on.act{pointer-events:auto}.toast.on{opacity:1}
+.progress{padding:40px 24px}.progress pre{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;max-height:50vh;overflow:auto;font-size:12.5px;white-space:pre-wrap}
+.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin:12px 0}.bar i{display:block;height:100%;width:40%;background:var(--accent);animation:slide 1.4s ease-in-out infinite}
+@keyframes slide{0%{margin-left:-40%}100%{margin-left:100%}}
+@media (prefers-reduced-motion:reduce){.bar i{animation:none;width:100%}}
+@media (max-width:860px){main{grid-template-columns:1fr}aside{border-left:0;border-top:1px solid var(--line)}header{flex-wrap:wrap}}
+
+.vw{position:relative;background:var(--bed);height:100%;min-height:0;display:grid;grid-template-rows:1fr auto}
+.stage{position:relative;overflow:hidden;cursor:grab;touch-action:none;min-height:0}
+.stage.drag{cursor:grabbing}
+.stage img{position:absolute;left:0;top:0;transform-origin:0 0;max-width:none;box-shadow:0 2px 14px rgba(0,0,0,.25);background:#fff;user-select:none;-webkit-user-drag:none}
+.vtools{display:flex;gap:6px;align-items:center;padding:8px 10px;background:var(--surface);border-top:1px solid var(--line);font-size:13px;color:var(--mute)}
+.vtools button{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:4px 10px;cursor:pointer;min-width:32px}
+.vtools button:hover{border-color:var(--accent)}.vtools .z{min-width:48px;text-align:center;font-variant-numeric:tabular-nums}.vtools .sp{flex:1}
+.pane{display:grid;grid-template-rows:minmax(240px,52vh) 1fr;height:100%}
+.pane .form{overflow:auto}
+.ov{position:fixed;inset:0;background:rgba(10,14,18,.86);z-index:20;display:none;grid-template-rows:auto 1fr}
+.ov.on{display:grid}.ov .top{display:flex;gap:12px;align-items:center;padding:10px 16px;color:#e6ebf0}.ov .top b{flex:1}
+.ov .vw{background:transparent}.ov .btn{background:#222c35;color:#e6ebf0;border-color:#33414d}
+kbd{font:12px var(--font);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;background:var(--surface);color:var(--mute)}
+.hint{color:var(--mute);font-size:12.5px;display:flex;gap:14px;flex-wrap:wrap}
+aside{overflow:hidden}
+</style></head>
+<body><div class="app">
+<nav id="nav"><h1>单据整理</h1>
+ <button data-v="home">首页</button><button data-v="review">待确认 <em id="nb"></em></button><button data-v="all"><span class="d">全部单据</span><span class="m">全部</span></button><button data-v="browse"><span class="d">按公司 / 年 / 月</span><span class="m">月份</span></button><button data-v="settings">设置</button>
+ <button class="rfsh" id="rfsh" title="重新应用最新规则:改名、分类、重复检查。你的更正不会被覆盖">↻ 刷新</button>
+ <div class="langsw" role="group" aria-label="Language"><button data-lang="en" aria-pressed="true">English</button><button data-lang="zh" aria-pressed="false">中文</button></div>
+ <div class="where" id="where"></div></nav>
+<div class="content"><section id="page"></section><main id="main" hidden><section class="list" id="list"></section><aside id="detail"></aside></main></div></div>
+<div class="ov" id="ov"><div class="top"><b id="ovt"></b><span class="hint"><span><kbd>滚轮</kbd> 缩放</span><span><kbd>拖动</kbd> 平移</span><span><kbd>双击</kbd> 100%/适合</span><span><kbd>Esc</kbd> 关闭</span></span><button class="btn" id="ovx">关闭</button></div><div id="ovbody"></div></div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+const T='__TOKEN__';let ROWS=[],SEL=null,TAB='all',ENTS=['Personal'];
+const $=s=>document.querySelector(s);
+const api=(p,b)=>fetch(p+(p.includes('?')?'&':'?')+'t='+T,b?{method:'POST',headers:{'X-Token':T,'Content-Type':'application/json'},body:JSON.stringify(b)}:{}).then(r=>r.json());
+const rm=n=>n==null?'—':'RM '+Number(n).toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2});
+const dmy=d=>{if(!d)return'';const[a,b,c]=d.split('-');return`${c.padStart(2,'0')}/${b.padStart(2,'0')}/${a}`};
+const iso=v=>{v=(v||'').trim();if(!v)return'';const im=v.match(/^(\d{4})\D(\d{1,2})\D(\d{1,2})$/);if(im)v=`${im[3]}/${im[2]}/${im[1]}`;let m=v.match(/^(\d{1,2})\D+(\d{1,2})\D+(\d{2}|\d{4})$/)||v.match(/^(\d{2})(\d{2})(\d{4}|\d{2})$/);if(!m)return null;let[,d,mo,y]=m;y=y.length==2?'20'+y:y;const t=new Date(+y,+mo-1,+d);if(t.getMonth()!=+mo-1||t.getDate()!=+d)return null;return`${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`};
+const fd=d=>{if(!d)return'没有日期';const[a,b,c]=d.split('-');return`${+c}/${+b}/${a}`};
+let _tt=null;const toast=m=>{const t=$('#toast');t.classList.remove('act');t.textContent=m;t.classList.add('on');clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('on'),2200)};
+function toastUndo(m,ids){const t=$('#toast');t.innerHTML='';t.append(m+'  ');const b=document.createElement('button');b.className='btn';b.textContent='撤销';b.style.marginLeft='8px';
+ b.onclick=async()=>{const d=await api('/api/undelete',{ids});ROWS=d.rows;render();toast('已恢复')};t.append(b);t.classList.add('on','act');clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('on'),8000)}
+const counted=r=>!r.duplicate&&!r.card_slip_of;
+const isDup=r=>!r.card_slip_of&&!r.hold&&(r.duplicate||(r.review||'').includes('Possible duplicate'));
+const isRev=r=>!!r.review&&!r.hold&&!r.duplicate,isOk=r=>!r.review&&!r.hold&&!r.duplicate;
+function level(r){if(r.hold||r.duplicate)return 'hold';if(r.review)return r.review.includes('Date missing')||r.review.includes('Check crop')||r.review.includes('Check rotation')?'bad':'warn';return 'ok'}
+const REASON={'Confirm merchant':'商家名称不在名单里,请对照图片确认或改正。','Check rotation':'无法确定这张是否正着放,请看图;不对就按 [ 或 ] 旋转。','Check crop':'这张可能被切到或需要手动旋转,请看图确认。','Date missing':'读不出日期,请对照图片输入。','Confirm date':'日期不够确定,请确认。','Confirm total':'两种识别读出的总额不同,请对照图片选一个。','Possible duplicate':'和另一张的商家、日期、总额完全相同,可能是同一张单据扫了两次。'};
+function why(r){const p=[];(r.review||'').split(' / ').filter(Boolean).forEach(x=>p.push(REASON[x]||x));
+ if(r.date_status.startsWith('DISAGREE'))p.push('日期:'+r.date_status.replace('DISAGREE ocr','OCR 读成').replace('/ ai','、AI 读成'));
+ if(r.total_status.startsWith('DISAGREE'))p.push('总额:'+r.total_status.replace('DISAGREE ocr','OCR 读成').replace('/ ai','、AI 读成'));
+ else if(r.total_status.includes('confirm'))p.push('总额只有一个来源读出,请核对。');
+ if(r.merchant_status.includes('check'))p.push('商家不在名单里,请确认名称。');
+ (r.notes||'').split(' | ').filter(Boolean).forEach(n=>{if(/below subtotal/.test(n))p.push('总额比小计还小,可能读错(也可能有折扣)。')});
+ return p}
+
+function makeViewer(host,src,full){
+ host.innerHTML=`<div class="vw"><div class="stage"></div><div class="vtools"><button data-a="out" title="缩小 (-)">−</button><span class="z">100%</span><button data-a="in" title="放大 (+)">+</button><button data-a="ccw" title="向左转 90° ([)">↺</button><button data-a="cw" title="向右转 90° (])">↻</button><button data-a="fit" title="适合窗口 (0)">适合</button><button data-a="one" title="实际大小 (1)">100%</button><span class="sp"></span>${full?'':'<button data-a="big" title="放大窗口 (空格)">放大窗口</button>'}</div></div>`;
+ const st=host.querySelector('.stage'),im=new Image();im.draggable=false;st.appendChild(im);const zl=host.querySelector('.z');
+ let S=1,X=0,Y=0,fit=1;
+ const ap=()=>{im.style.transform=`translate(${X}px,${Y}px) scale(${S})`;zl.textContent=Math.round(S*100)+'%'};
+ const doFit=()=>{const w=st.clientWidth,h=st.clientHeight;if(!im.naturalWidth||!w)return;fit=Math.min(w/im.naturalWidth,h/im.naturalHeight,1.0);S=fit;X=(w-im.naturalWidth*S)/2;Y=(h-im.naturalHeight*S)/2;ap()};
+ const zoomAt=(cx,cy,ns)=>{ns=Math.max(fit*.5,Math.min(8,ns));X=cx-(cx-X)*(ns/S);Y=cy-(cy-Y)*(ns/S);S=ns;ap()};
+ const mid=()=>[st.clientWidth/2,st.clientHeight/2];
+ im.onload=doFit;im.src=src;new ResizeObserver(()=>{if(Math.abs(S-fit)<1e-6)doFit()}).observe(st);
+ st.addEventListener('wheel',e=>{e.preventDefault();const r=st.getBoundingClientRect();zoomAt(e.clientX-r.left,e.clientY-r.top,S*Math.exp(-e.deltaY*(e.ctrlKey?.01:.0018)))},{passive:false});
+ const P=new Map();let drag=null,pd=0;
+ st.addEventListener('pointerdown',e=>{P.set(e.pointerId,[e.clientX,e.clientY]);st.setPointerCapture(e.pointerId);if(P.size===1){drag=[e.clientX,e.clientY,X,Y];st.classList.add('drag')}else if(P.size===2){const[a,b]=[...P.values()];pd=Math.hypot(a[0]-b[0],a[1]-b[1]);drag=null}});
+ st.addEventListener('pointermove',e=>{if(!P.has(e.pointerId))return;P.set(e.pointerId,[e.clientX,e.clientY]);
+  if(P.size===2){const[a,b]=[...P.values()];const d=Math.hypot(a[0]-b[0],a[1]-b[1]);if(pd){const r=st.getBoundingClientRect();zoomAt((a[0]+b[0])/2-r.left,(a[1]+b[1])/2-r.top,S*d/pd)}pd=d;return}
+  if(!drag)return;X=drag[2]+e.clientX-drag[0];Y=drag[3]+e.clientY-drag[1];ap()});
+ const up=e=>{P.delete(e.pointerId);if(P.size<2)pd=0;if(P.size===1){const[p]=[...P.values()];drag=[p[0],p[1],X,Y]}else{drag=null;st.classList.remove('drag')}};
+ st.addEventListener('pointerup',up);st.addEventListener('pointercancel',up);
+ st.addEventListener('dblclick',e=>{const r=st.getBoundingClientRect();Math.abs(S-fit)<.01?zoomAt(e.clientX-r.left,e.clientY-r.top,1):doFit()});
+ const act=a=>{const[m,n]=mid();if(a==='in')zoomAt(m,n,S*1.25);if(a==='out')zoomAt(m,n,S/1.25);if(a==='fit')doFit();if(a==='one')zoomAt(m,n,1);if(a==='big')openOv();if(a==='cw')rot(90);if(a==='ccw')rot(270)};
+ host.querySelectorAll('.vtools button').forEach(b=>b.onclick=()=>act(b.dataset.a));
+ host._act=act;return host}
+let OV=null,OUT='';const BUST={};
+const crop=id=>`/crop/${id}.jpg?t=${T}&v=${BUST[id]||0}`;
+async function rot(deg){const r=ROWS.find(x=>x.id===SEL);if(!r)return;const d=await api('/api/rotate',{id:r.id,deg});ROWS=d.rows;BUST[r.id]=(BUST[r.id]||0)+1;if(OV)closeOv();render();toast('已旋转')}
+function openOv(){const r=ROWS.find(x=>x.id===SEL);if(!r)return;$('#ov').classList.add('on');$('#ovt').textContent=(r.merchant||'未识别商家')+'  '+fd(r.date)+'  '+rm(r.total_myr);OV=makeViewer($('#ovbody'),crop(r.id),true)}
+function closeOv(){$('#ov').classList.remove('on');$('#ovbody').innerHTML='';OV=null}
+$('#ovx').onclick=closeOv;
+
+let VIEW='home',FILT=null,MD=false,Q='';
+const qmatch=r=>{if(!Q)return true;const q=Q.toLowerCase().trim(),num=q.replace(/^rm\s*/,'');const hay=[r.merchant,r.category,r.subcategory,r.entity,fd(r.date),dmy(r.date),r.date,r.total_myr!=null?Number(r.total_myr).toFixed(2):''].join(' ').toLowerCase();return q.split(/\s+/).every(w=>hay.includes(w.replace(/^rm/,'')||w))||(num&&r.total_myr!=null&&Number(r.total_myr).toFixed(2).startsWith(num))};
+const pool=()=>FILT?ROWS.filter(r=>r.entity===FILT.ent&&(!FILT.ym||(r.date||'').startsWith(FILT.ym))&&(FILT.ym!=='none'||!r.date)):ROWS;
+const visible=()=>pool().filter(qmatch).filter(r=>TAB==='all'||(TAB==='review'?isRev(r):TAB==='hold'?r.hold:TAB==='dup'?isDup(r):TAB==='bill'?r.is_bill:isOk(r)&&!r.is_bill));
+function go(d,reviewOnly){const v=visible();let i=v.findIndex(r=>r.id===SEL);let n=i;do{n+=d}while(reviewOnly&&n>=0&&n<v.length&&!isRev(v[n]));if(n<0||n>=v.length)return false;SEL=v[n].id;render();document.querySelector('.row[aria-selected=true]')?.scrollIntoView({block:'nearest'});return true}
+let BINFO={places:{}};async function loadBills(){try{BINFO=await api('/api/bills-info')}catch(e){}}
+async function load(){loadBills();const d=await api('/api/records');staleBanner(!!d.stale);ROWS=d.rows;ENTS=d.entities;OUT=d.out;$('#where').textContent='结果文件夹:'+d.out;
+ $('#nb').textContent=ROWS.filter(isRev).length||'';
+ if(d.job.running)return progress();show()}
+function show(){const work=VIEW==='review'||VIEW==='all'||VIEW==='filtered';
+ document.querySelectorAll('#nav [data-v]').forEach(b=>b.setAttribute('aria-current',String(b.dataset.v===VIEW||(VIEW==='filtered'&&b.dataset.v==='browse'))));
+ $('#main').hidden=!work;$('#page').hidden=work;$('#nb').textContent=ROWS.filter(isRev).length||'';
+ if(work){const v=visible();if(!v.find(r=>r.id===SEL))SEL=(v.find(isRev)||v[0]||{}).id||null;render()}
+ else{closeOv();if(VIEW==='home')home();else if(VIEW==='browse')browse();else settings()}}
+function nav(v,filt){MD=false;VIEW=v;FILT=filt||null;if(v==='review')TAB='review';else if(v==='all'||v==='filtered')TAB='all';SEL=null;show()}
+document.querySelectorAll('#nav [data-v]').forEach(b=>b.onclick=()=>nav(b.dataset.v));
+const ymname=ym=>ym==='none'?'没有日期':ym;
+async function importScans(){const ent=$('#imp-ent')?.value||ENTS[0];const p=await api('/api/pick-folder',{prompt:trs('选择放扫描页的文件夹')});if(!p.path)return;
+ await api('/api/run',{input:p.path,entity:ent});progress()}
+function home(){const need=ROWS.filter(isRev).length,held=ROWS.filter(r=>r.hold).length,tot=ROWS.filter(counted).reduce((s,r)=>s+(r.total_myr||0),0);
+ const by={};ROWS.forEach(r=>{const e=by[r.entity]=by[r.entity]||{n:0,need:0,tot:0};e.n++;if(isRev(r))e.need++;if(counted(r))e.tot+=r.total_myr||0});
+ $('#page').innerHTML=`<h2>单据整理</h2><p class="sub">${ROWS.length?`已整理 ${ROWS.length} 张单据,其中 ${need} 张需要你确认。`:'还没有单据。从下面开始导入,或到“设置”切换到你之前的结果文件夹。'}</p>
+ <div class="cards">
+  <div class="card big"><h3>导入扫描件</h3><p>选一个放扫描页的文件夹:自动切出每张单据、摆正、拼接长单据、识别商家/日期/总额。原图不会被改动。</p>
+   <label>这批单据归属<select id="imp-ent">${entOpts()}</select></label><button class="btn primary" id="h-imp">选择文件夹并开始</button></div>
+  <div class="card"><h3>待确认</h3><p>${need?`有 ${need} 张需要你看一眼:日期或总额不确定、可能被切到、可能重复。`:'没有需要确认的单据。'}${held?` 另有 ${held} 张搁置中,在“搁置”里可以找到。`:''}${ROWS.filter(isDup).length?` <b style="color:var(--bad)">⚠ 有 ${ROWS.filter(isDup).length} 张可能是重复扫描。</b>`:''}</p><button class="btn" id="h-rev" ${need?'':'disabled'}>开始确认</button></div>
+  <div class="card"><h3>浏览单据</h3><p>按公司 / 年 / 月查看已归档的单据,可放大检查。</p><button class="btn" id="h-all">全部单据</button> <button class="btn" id="h-br">按公司 / 年 / 月</button></div>
+  <div class="card"><h3>交给会计</h3><p>导出 Excel / CSV:按公司和月份分表,待核对的单据单独放一页,不会混进总数。</p><button class="btn primary" id="h-pdf">PDF 总结</button> <button class="btn" id="h-exp">导出 Excel</button></div>
+  <div class="card"><h3>刷新</h3><p>装了新版本后点这里:用最新规则重新命名、分类和检查重复,几秒钟。你的更正不会被覆盖。</p><button class="btn primary" id="h-rf">刷新</button> <button class="btn" id="h-rr">重新识别全部…</button></div>
+  <div class="card"><h3>结果文件夹</h3><p>整理好的文件在 Finder 里按 公司/年/月 存放,另有 index.csv。</p><button class="btn" id="h-open">在 Finder 中打开</button></div>
+ </div>
+ ${ROWS.length?`<table class="t"><tr><th>公司 / 归属</th><th class="n">单据</th><th class="n">待确认</th><th class="n">已读出总额</th></tr>${Object.entries(by).map(([k,v])=>`<tr class="go" data-e="${k.replace(/"/g,'&quot;')}"><td>${k}</td><td class="n">${v.n}</td><td class="n">${v.need}</td><td class="n">${rm(v.tot)}</td></tr>`).join('')}</table>`:''}`;
+ if($('#imp-ent'))wireEnt($('#imp-ent'));$('#h-imp').onclick=importScans;$('#h-pdf').onclick=reportPanel;$('#h-rev').onclick=()=>nav('review');$('#h-all').onclick=()=>nav('all');$('#h-br').onclick=()=>nav('browse');
+ $('#h-rf').onclick=refresh;$('#h-rr').onclick=reread;$('#h-exp').onclick=async()=>{const r=await api('/api/export',{});toast(r.error?('导出失败:'+r.error):'已导出,并在 Finder 中打开')};
+ $('#h-open').onclick=()=>api('/api/open',{sub:''});
+ document.querySelectorAll('tr.go').forEach(t=>t.onclick=()=>nav('filtered',{ent:t.dataset.e}))}
+function browse(){const g={};ROWS.forEach(r=>{const y=(r.date||'none').slice(0,7);((g[r.entity]=g[r.entity]||{})[y]=(g[r.entity][y]||{n:0,tot:0})).n++;if(counted(r))g[r.entity][y].tot+=r.total_myr||0});
+ $('#page').innerHTML=`<h2>按公司 / 年 / 月</h2><p class="sub">点一个月份,只看那个月的单据。</p>`+(Object.keys(g).length?Object.entries(g).map(([e,ms])=>`<div class="ent"><h3>${e}</h3><div class="mon">${Object.keys(ms).sort().reverse().map(y=>`<button data-e="${e.replace(/"/g,'&quot;')}" data-y="${y}"><b>${ymname(y)}</b><small>${ms[y].n} 张 · ${rm(ms[y].tot)}</small></button>`).join('')}</div></div>`).join(''):'<div class="empty"><h2>还没有单据</h2></div>');
+ document.querySelectorAll('.mon button').forEach(b=>b.onclick=()=>nav('filtered',{ent:b.dataset.e,ym:b.dataset.y}))}
+function settings(){$('#page').innerHTML=`<h2>设置</h2><p class="sub">这些设置保存在这台电脑上。</p>
+ <div class="cards"><div class="card"><h3>结果文件夹</h3><p>${OUT}</p><p>每次打开会自动回到这个文件夹。要看别的批次,在这里切换。</p><button class="btn" id="s-sw">切换结果文件夹</button></div>
+ <div class="card"><h3>公司 / 归属名称</h3><p>每行一个,例如 Personal、你的公司名。导入时可选择,单据会按它分文件夹。</p><textarea id="s-ent">${ENTS.join('\n')}</textarea><button class="btn primary" id="s-save">保存</button></div>
+ <div class="card"><h3>版本与更新</h3><div id="s-ver">…</div></div>
+ <div class="card" id="s-bills"><h3>账单文件夹</h3><div id="s-bills-body">…</div></div>
+ <div class="card"><h3>语言</h3><div class="cardlang"><button data-lang="en">English</button><button data-lang="zh">中文</button></div></div>
+ <div class="card" id="s-phone" hidden><h3>手机访问</h3><div id="s-phone-body"></div></div></div>`;
+ billsCard();phoneCard();checkUpdate(false).then(verCard);document.querySelectorAll('[data-lang]').forEach(b=>{b.onclick=()=>setLang(b.dataset.lang);b.setAttribute('aria-pressed',String(b.dataset.lang===LANG))});
+ $('#s-sw').onclick=switchOut;$('#s-save').onclick=async()=>{const r=await api('/api/entities',{names:$('#s-ent').value.split('\n')});ENTS=r.entities;toast('已保存')}}
+async function billsCard(){await loadBills();const b=$('#s-bills-body');if(!b)return;const s=BINFO.status||{};
+ b.innerHTML=`<p>确认好的水电、电话、网络、地税等账单,会自动复制到这里,按 类型 / 地点 / 年份 存放,文件名跟你原来的一样(例如 shop october 2026)。只会新增文件,不会删除或覆盖。</p><p><b>${BINFO.root||'还没有选择'}</b></p>
+ <p>${s.running?`正在从已有的账单学习每个地点的户口号码… ${s.done||0}/${s.files||0}`:`已认识 ${BINFO.learned||0} 个地点的户口号码。`}</p><button class="btn" id="b-dir">选择账单文件夹</button> <button class="btn" id="b-learn">重新学习</button>`;
+ $('#b-dir').onclick=async()=>{await api('/api/bills-dir',{});billsCard()};$('#b-learn').onclick=async()=>{await api('/api/bills-learn',{});toast('正在学习,完成后会自动把确认好的账单存进去');setTimeout(billsCard,1500)};
+ if(s.running)setTimeout(()=>{if($('#s-bills-body'))billsCard()},3000)}
+async function phoneCard(){const i=await api('/api/phone-info');if(i.error||i.on===undefined)return;$('#s-phone').hidden=false;const b=$('#s-phone-body');
+ const note='<p>只在同一个 Wi-Fi 下可用,需要 PIN。连接是 HTTP(未加密),所以不要在公共 Wi-Fi 使用。要在外面看,请用 Tailscale 之类的私人网络,不要把电脑端口开放到公网。手机上只能查看和确认单据,不能导入或改设置。</p>';
+ if(i.on){b.innerHTML=`<p>已开启。在手机浏览器打开:</p><p><b>${i.url||'(找不到本机局域网地址)'}</b></p><p>PIN:<b style="font-size:20px;letter-spacing:.2em">${i.pin}</b></p>${note}<button class="btn" id="p-new">重新生成 PIN</button> <button class="btn" id="p-off">关闭</button>`;
+  $('#p-new').onclick=async()=>{await api('/api/phone',{on:true,newpin:true});toast('PIN 已更换,旧的手机需要重新登录');phoneCard()};
+  $('#p-off').onclick=async()=>{await api('/api/phone',{on:false});toast('已设为关闭,重新打开 App 后生效');phoneCard()}}
+ else if(i.wanted){b.innerHTML='<p>已设为开启,请关闭并重新打开 App 后生效。</p><button class="btn" id="p-off">改回关闭</button>';$('#p-off').onclick=async()=>{await api('/api/phone',{on:false});phoneCard()}}
+ else{b.innerHTML=`<p>用手机看单据、确认日期和总额。默认关闭。</p>${note}<button class="btn primary" id="p-on">开启手机访问</button>`;$('#p-on').onclick=async()=>{await api('/api/phone',{on:true});toast('已设为开启,请关闭并重新打开 App');phoneCard()}}}
+async function switchOut(){const p=await api('/api/pick-folder',{prompt:trs('选择已有的结果文件夹(里面有 Organised Receipts)')});if(!p.path)return;await api('/api/set-output',{path:p.path});SEL=null;VIEW='home';FILT=null;load()}
+function render(){const m=$('#main');m.classList.toggle('md',MD);const need=pool().filter(isRev).length,held=pool().filter(r=>r.hold).length,dupn=pool().filter(isDup).length,billn=pool().filter(r=>r.is_bill).length;
+ if(!pool().length){$('#list').innerHTML=`<div class="empty"><h2>这里没有单据</h2>回到“首页”导入扫描件,或在“设置”切换结果文件夹。</div>`;$('#detail').innerHTML='';return}
+ const tot=pool().filter(counted).reduce((s,r)=>s+(r.total_myr||0),0);
+ const shown=visible();
+ const hadQ=document.activeElement&&document.activeElement.id==='q',qpos=hadQ?document.activeElement.selectionStart:0;
+ $('#list').innerHTML=`<div class="search"><input id="q" type="search" placeholder="搜索店名、金额或日期,例如 jaya、154.90、13/10" value="${Q.replace(/"/g,'&quot;')}"></div>`+(FILT?`<div class="chip">${FILT.ent}${FILT.ym?' · '+ymname(FILT.ym):''}<button id="clr" title="清除筛选">✕</button></div>`:'')+`<div class="summary"><div><b>${pool().length}</b><span>张单据</span></div><div><b>${need}</b><span>需要你确认</span></div><div><b>${rm(tot)}</b><span>已读出的总额合计</span></div></div>
+ ${dupn&&TAB!=='dup'?`<div class="why" style="display:flex;align-items:center;gap:10px;margin:8px 0">⚠ 有 ${dupn} 张可能是重复扫描的单据<button class="btn" id="seedup" style="margin-left:auto">查看</button></div>`:''}${TAB==='dup'&&dupn?`<div class="why" style="display:flex;align-items:center;gap:10px;margin:8px 0">这里是可能重复扫描的单据。打开一张可以和原来那张对比,再决定删除还是保留。<button class="btn" id="delall" style="margin-left:auto;color:var(--bad)">全部删除(${dupn} 张)</button></div>`:''}<div class="tabs" role="tablist">${[['all','全部'],['review','需要确认 '+need],['ok','已归档 '+pool().filter(r=>isOk(r)&&!r.is_bill).length],['bill','账单 '+billn],['hold','搁置 '+held]].concat(dupn||TAB==='dup'?[['dup','重复 '+dupn]]:[]).map(([k,v])=>`<button class="tab" role="tab" data-k="${k}" aria-selected="${TAB===k}">${v}</button>`).join('')}</div>`+
+ shown.map(r=>`<div class="row" tabindex="0" data-id="${r.id}" aria-selected="${SEL===r.id}"><img loading="lazy" src="${crop(r.id)}" alt=""><div><div class="m">${r.card_slip_of?'↳ ':''}${r.merchant||'未识别商家'}</div><div class="s"><span class="dot ${level(r)}"></span>${r.card_slip_of?'刷卡单 · 已和单据放在一起':r.duplicate?'重复扫描':r.hold?'已搁置':r.review?(r.is_bill?'账单 · 需要确认':'需要确认'):(r.is_bill?'账单 · 已归档':'已归档')}<span>${fd(r.date)}</span><span>${r.subcategory||''}</span></div></div><div class="amt">${rm(r.total_myr)}<small>${r.entity}</small></div></div>`).join('')||'<div class="empty">这一类里没有单据。</div>';
+ document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{TAB=b.dataset.k;render()});
+ {const qi=$('#q');qi.oninput=()=>{Q=qi.value;render()};qi.onkeydown=e=>{e.stopPropagation();if(e.key==='Escape'){Q='';render()}if(e.key==='Enter'){const v=visible();if(v[0]){SEL=v[0].id;MD=true;render()}}};if(hadQ){qi.focus();qi.setSelectionRange(qpos,qpos)}}
+ if($('#seedup'))$('#seedup').onclick=()=>{TAB='dup';SEL=null;MD=false;render()};
+ if($('#delall')){let armed=false;$('#delall').onclick=async()=>{const ids=pool().filter(isDup).map(r=>r.id);if(!armed){armed=true;$('#delall').textContent=`再点一次:确定删除 ${ids.length} 张`;return}
+  const d=await api('/api/delete',{ids});if(d.error){toast('出错了:'+d.error);return}ROWS=d.rows;SEL=null;MD=false;TAB='all';render();toastUndo(`已删除 ${d.ids.length} 张重复的单据`,d.ids)}}
+ $('#clr')&&($('#clr').onclick=()=>nav('all'));
+ document.querySelectorAll('.row').forEach(b=>{b.onclick=()=>{SEL=b.dataset.id;MD=true;render()};b.onkeydown=e=>{if(e.key==='Enter'){SEL=b.dataset.id;MD=true;render()}}});
+ if(SEL)detail()}
+function snap(r,k){const v=k==='date'?r.date:r.total_myr;if(v==null||v==='')return '';const flag=(r.review||'').split(' / ').some(x=>k==='date'?/date/i.test(x):/total/i.test(x));return `<div class="snap ${flag?'flag':''}" hidden><img alt="" src="/api/field?id=${r.id}&k=${k}&t=${T}&v=${BUST[r.id]||0}" onload="this.parentNode.hidden=false"><small>${k==='date'?'小票上读到这个日期的那一行':'小票上读到这个总额的那一行'}</small></div>`}
+function dupBox(r){if(!isDup(r))return '';const o=(r.dup_of?ROWS.find(x=>x.id===r.dup_of):null)||ROWS.find(x=>x.id!==r.id&&!isDup(x)&&!x.card_slip_of&&r.total_myr!=null&&x.total_myr===r.total_myr&&(!r.date||!x.date||x.date===r.date))||ROWS.find(x=>x.id!==r.id&&!isDup(x)&&x.source_scan!==r.source_scan&&x.merchant&&x.merchant===r.merchant&&x.date&&x.date===r.date)||ROWS.find(x=>x.id!==r.id&&!x.card_slip_of&&x.merchant&&x.merchant===r.merchant&&x.date&&x.date===r.date&&(x.total_myr==null||x.total_myr===r.total_myr));
+ return `<div class="why" style="border-color:var(--bad)"><b>⚠ 可能是重复扫描</b>${o?`,和这张很像:<button type="button" data-go="${o.id}" style="display:flex;gap:10px;align-items:center;margin:8px 0;border:1px solid var(--line);border-radius:8px;background:#fff;padding:6px;cursor:pointer;text-align:left;width:100%"><img alt="" src="${crop(o.id)}" style="height:90px;max-width:120px;object-fit:contain"><span>${o.merchant||'未识别商家'}<br>${fd(o.date)} · ${rm(o.total_myr)}<br><small style="color:var(--mute)">点一下打开比较</small></span></button>`:'。'}
+ <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button class="btn" id="dupdel" style="color:var(--bad);border-color:var(--bad)">删除这张</button><button class="btn" id="dupkeep">不是重复,两张都保留</button></div></div>`}
+function slipBox(r){const a=r.card_slip_of?ROWS.find(x=>x.id===r.card_slip_of):null,b=r.card_slip?ROWS.find(x=>x.id===r.card_slip):null;
+ if(a)return `<div class="why fine slipb">这是 <b>${a.merchant||'未识别商家'} ${fd(a.date)} ${rm(a.total_myr)}</b> 的银行刷卡单,已经和那张单据放在一起,不会另外算进总额。<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn" data-go="${a.id}">查看那张单据</button><button class="btn" id="unslip" data-of="${a.id}">不是同一笔付款</button></div></div>`;
+ if(b)return `<div class="why fine slipb">附带银行刷卡单(同一笔付款,不另算总额):<button type="button" data-go="${b.id}" style="display:block;margin-top:8px;border:1px solid var(--line);border-radius:8px;background:#fff;padding:4px;cursor:pointer"><img alt="" src="${crop(b.id)}" style="display:block;max-height:140px"></button></div>`;
+ if(r.is_slip)return '<div class="why">这是银行刷卡单,但没找到同一天、同金额的单据,所以它自己算一笔。如果单据之后才扫描进来,刷新后会自动放在一起。</div>';
+ return ''}
+function driveBox(r){if(!r.is_bill||r.card_slip_of)return '';
+ const pl=(BINFO.places||{})[r.drive_type]||[],how={account:'按户口号码自动认出',learned:'按你之前的选择认出',name:'按账单上的地址认出',user:'你选的'}[r.drive_how]||'';
+ const rel=p=>p?p.slice((BINFO.root||'').length+1):'';
+ const st=r.drive_path?`✓ 已存到:${rel(r.drive_path)}`:!r.drive_prop?'认不出是哪一个地点,请从上面选一个。以后同一个户口号码会自动认出。':!r.date?'填好日期后才能存。':(r.review?`确认无误后会存到:${rel(r.drive_plan)}`:`会存到:${rel(r.drive_plan)}`);
+ return `<div class="why fine" id="billbox"><label style="margin:0">存到账单文件夹:${r.drive_type}<select id="f-pl"><option value="">— 请选择地点 —</option>${pl.map(p=>`<option value="${p.replace(/"/g,'&quot;')}" ${p===r.drive_prop?'selected':''}>${p}</option>`).join('')}</select></label><div style="margin-top:6px;font-size:13px">${how?`<span style="color:var(--mute)">(${how})</span> `:''}${BINFO.root?st:'还没有设置账单文件夹。到「设置」里选择,确认好的账单就会自动存进去。'}</div></div>`}
+function detail(){const r=ROWS.find(x=>x.id===SEL);if(!r)return;const w=why(r);
+ $('#detail').innerHTML=`<div class="pane"><div id="vwh"></div><div class="form"><button class="btn back" id="back">← 返回列表</button>
+ ${dupBox(r)}${slipBox(r)}${driveBox(r)}${r.duplicate?'<div class="why">这张已标记为重复扫描(和另一张是同一张单据),不会算进总额。如果其实不是重复,勾选下面的方框再点“确认无误”。</div>':''}${r.hold?'<div class="why">这张已搁置:不会算进总额,也不会出现在“需要确认”里。想好了就改好并点“确认无误”,或点“取消搁置”。</div>':''}<div class="why ${w.length?'':'fine'}">${w.length?w.join('<br>'):'读出的内容互相一致,已归档。'}</div>
+ <label>商家<input id="f-m" value="${(r.merchant||'').replace(/"/g,'&quot;')}"></label>
+ <div class="two"><div class="f"><label>日期<input id="f-d" inputmode="numeric" placeholder="日/月/年" value="${dmy(r.date)}"></label>${snap(r,'date')}</div><div class="f"><label>总额(RM)<input id="f-t" inputmode="numeric" value="${r.total_myr!=null&&r.total_myr!==''?Number(r.total_myr).toFixed(2):''}"></label>${snap(r,'total')}</div></div>
+ <div class="two"><label>归属<select id="f-e">${entOpts(r.entity)}</select></label><label>${r.is_bill&&!r.card_slip_of?'账单类型':'分类'}<select id="f-c">${catOpts(r)}</select></label></div>
+ <div class="two"><label>税务标签(可选,仅作备注,请与会计确认)<select id="f-x">${taxOpts(r)}</select></label><span></span></div>
+ <div class="read"><span>OCR</span><b>${fd(r.ocr_date)} · ${rm(r.ocr_total)}</b><span>AI</span><b>${fd(r.ai_date)} · ${rm(r.ai_total)}</b></div>
+${(r.review||'').includes('Possible duplicate')?'<label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="f-nd" style="width:auto"> 这是另一张单据,不是重复扫描(不勾选就表示它是重复的)</label>':''}
+  <div class="actions"><button class="btn primary" id="save">确认无误并看下一张</button><button class="btn" id="hold" title="先放一边,之后在“搁置”里找到 (H)">${r.hold?'取消搁置':'搁置'}</button><button class="btn" id="join">拼接其他段…</button><button class="btn" id="kind" title="账单(水电、电话、网络、门牌税、地税等)和单据分开存放">${r.is_bill?'不是账单':'这是账单'}</button><button class="btn" id="recrop" title="打开原始扫描页,自己框出每一张单据">重新切割…</button>${r.id.includes('__')?'<button class="btn" id="unjoin">撤销拼接</button>':''}</div>
+ <div class="hint"><span><kbd>Enter</kbd> 确认并下一张</span><span><kbd>↑</kbd><kbd>↓</kbd> 上/下一张</span><span><kbd>空格</kbd> 放大图片</span><span><kbd>[</kbd><kbd>]</kbd> 旋转</span><span><kbd>⌘</kbd><kbd>↓</kbd> 跳过不确认</span></div></div></div>`;
+ makeViewer($('#vwh'),crop(r.id),false);wireEnt($('#f-e'));
+ /* total: type digits only, the last two are cents (5488 -> 54.88), like a cash register */
+ {const ft=$('#f-t');ft.addEventListener('input',()=>{const d=ft.value.replace(/\D/g,'').replace(/^0+/,'').slice(0,9);ft.value=d?(Number(d)/100).toFixed(2):'';try{ft.setSelectionRange(ft.value.length,ft.value.length)}catch(e){}});
+  ft.addEventListener('focus',()=>setTimeout(()=>ft.select(),0))}
+ $('#back').onclick=()=>{MD=false;render()};
+ if(r.is_bill&&!r.card_slip_of)$('#f-c').onchange=async e=>{const c=e.target.value.split(' | ');const d=await api('/api/correct',{id:r.id,category:c[0],subcategory:c[1]||''});ROWS=d.rows;render();toast('已改好类型,请确认地点')};
+ if($('#f-pl'))$('#f-pl').onchange=async e=>{if(!e.target.value)return;const d=await api('/api/correct',{id:r.id,property:e.target.value});ROWS=d.rows;render();toast('已记住:以后同一个户口号码会自动放到这里')};
+ document.querySelectorAll('#detail [data-go]').forEach(b=>b.onclick=()=>{SEL=b.dataset.go;TAB='all';render()});
+ if($('#dupdel')){let armed=false;$('#dupdel').onclick=async()=>{if(!armed){armed=true;$('#dupdel').textContent='再点一次确认删除';return}const d=await api('/api/delete',{ids:[r.id]});if(d.error){toast('出错了:'+d.error);return}ROWS=d.rows;if(!go(1,false)){SEL=null;MD=false;render()}toastUndo('已删除这张重复的单据',d.ids)}}
+ if($('#dupkeep'))$('#dupkeep').onclick=async()=>{const d=await api('/api/correct',{id:r.id,not_duplicate:true});ROWS=d.rows;render();toast('已保留,两张都会算')};
+ if($('#unslip'))$('#unslip').onclick=async()=>{const d=await api('/api/correct',{id:r.id,not_slip_of:$('#unslip').dataset.of});ROWS=d.rows;render();toast('已分开,不会再把它们放在一起')};
+ $('#hold').onclick=async()=>{const on=!r.hold;const d=await api('/api/correct',{id:r.id,hold:on});ROWS=d.rows;
+  if(on){toast('已搁置,在“搁置”里可以找到');if(!go(1,TAB==='review')&&!go(-1,TAB==='review')){SEL=null;MD=false;render()}}else{toast('已取消搁置');render()}};$('#join').onclick=()=>joinPanel(r);$('#recrop').onclick=()=>cropPanel(r);$('#kind').onclick=async()=>{const toBill=!r.is_bill;const d=await api('/api/correct',{id:r.id,kind:toBill?'bill':'receipt'});ROWS=d.rows;TAB=toBill?'bill':'all';render();
+  if(toBill){toast('已改成账单,请选择账单类型和地点');const bx=$('#f-c');if(bx){bx.scrollIntoView({block:'center'});bx.animate([{boxShadow:'0 0 0 3px var(--accent)'},{boxShadow:'0 0 0 0 transparent'}],{duration:1500})}}else toast('已改成单据')};if($('#unjoin'))$('#unjoin').onclick=async()=>{if(!r.id.includes('__'))return;const x=await api('/api/unjoin',{id:r.id});if(x.error){toast('出错了:'+x.error);return}if(x.started){SEL=null;MD=false;progress();return}ROWS=x.rows;SEL=null;render();toast('已撤销拼接')};
+ $('#save').onclick=async()=>{const c=$('#f-c').value.split(' | ');
+  const di=iso($('#f-d').value);if(di===null){toast('日期看不懂,请用 日/月/年,例如 13/10/2026');$('#f-d').focus();return}
+  const miss=[['#f-d','请先填日期,不然没办法按年 / 月归档'],['#f-t','请先填总额'],['#f-m','请先填商家名称']].find(([q])=>!$(q).value.trim());
+  if(miss){toast(miss[1]);$(miss[0]).focus();return}
+  const isDup=!!$('#f-nd')&&!$('#f-nd').checked;
+  const d=await api('/api/correct',{id:r.id,merchant:$('#f-m').value,date:iso($('#f-d').value),total:$('#f-t').value,entity:$('#f-e').value,category:c[0],subcategory:c[1]||'',tax_tag:$('#f-x').value,crop_ok:true,hold:false,...($('#f-nd')?{not_duplicate:$('#f-nd').checked}:{})});
+  ROWS=d.rows;toast(isDup?'已标记为重复扫描,移到“重复”(不算进总额)':'已确认并归档');const v=visible();if(!go(1,true)&&!go(1,false)){MD=false;render()}}
+ {const fdi=$('#f-d');fdi.addEventListener('blur',()=>{const v=iso(fdi.value);if(v)fdi.value=dmy(v)});fdi.addEventListener('focus',()=>setTimeout(()=>fdi.select(),0))}
+ document.querySelectorAll('#detail input,#detail select').forEach(el=>el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#save').click()}}))
+}
+async function progress(){$('#main').hidden=true;$('#page').hidden=false;$('#page').innerHTML='<div class="progress" style="padding:0"><h2 style="margin-top:0">正在识别</h2><div class="bar"><i></i></div><pre id="log"></pre></div>';
+ const t=setInterval(async()=>{const j=await api('/api/progress');const l=$('#log');if(l){l.textContent=j.log.join('\n');l.scrollTop=l.scrollHeight}
+  if(!j.running){clearInterval(t);if(j.error)toast('出错了:'+j.error);VIEW=j.error?'home':'review';TAB='review';load()}},1500)}
+
+document.addEventListener('keydown',e=>{if((e.key==='h'||e.key==='H')&&!document.querySelector('.dlg')&&!e.metaKey&&!e.ctrlKey&&!/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName||'')&&$('#hold')){e.preventDefault();$('#hold').click();return}
+ if(!(VIEW==='review'||VIEW==='all'||VIEW==='filtered'))return;
+ const inField=/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName);
+ if($('#ov').classList.contains('on')){if(e.key==='Escape'||e.key===' '){e.preventDefault();closeOv()}else if(e.key==='+'||e.key==='=')OV._act('in');else if(e.key==='-')OV._act('out');else if(e.key==='0')OV._act('fit');else if(e.key==='1')OV._act('one');return}
+ if((e.metaKey||e.ctrlKey)&&e.key==='ArrowDown'){e.preventDefault();go(1,false);return}
+ if((e.metaKey||e.ctrlKey)&&e.key==='ArrowUp'){e.preventDefault();go(-1,false);return}
+ if(inField)return;
+ if(e.key==='ArrowDown'||e.key==='j'){e.preventDefault();go(1,false)}
+ else if(e.key==='ArrowUp'||e.key==='k'){e.preventDefault();go(-1,false)}
+ else if(e.key===' '){e.preventDefault();openOv()}
+ else if(e.key==='Enter'){e.preventDefault();const el=$('#f-d')||$('#f-m');el&&el.focus()}
+ else if(e.key==='['){rot(270)}else if(e.key===']'){rot(90)}
+ else if(e.key==='+'||e.key==='='){$('#vwh')?._act('in')}else if(e.key==='-'){$('#vwh')?._act('out')}else if(e.key==='0'){$('#vwh')?._act('fit')}
+});
+/* ---- company / owner picker with "add company" ---- */
+const NEWV='__new__';
+function entOpts(sel){return (sel&&!ENTS.includes(sel)?`<option selected>${sel.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</option>`:'')+ENTS.map(e=>`<option ${e===sel?'selected':''}>${e.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</option>`).join('')+`<option value="${NEWV}">＋ 添加公司…</option>`}
+function wireEnt(sel){let prev=sel.value;sel.addEventListener('change',()=>{if(sel.value!==NEWV){prev=sel.value;return}
+ const box=document.createElement('div');box.className='addent';box.innerHTML='<input placeholder="公司名称" maxlength="60" aria-label="公司名称"><button class="btn primary" type="button">添加</button><button class="btn" type="button">取消</button>';
+ sel.after(box);sel.hidden=true;const [inp,ok,no]=box.querySelectorAll('input,button');inp.focus();
+ const done=()=>{box.remove();sel.hidden=false};
+ no.onclick=()=>{sel.value=prev;done()};
+ const add=async()=>{const n=inp.value.trim();if(!n)return;try{const r=await api('/api/entities',{names:[...ENTS,n]});ENTS=r.entities;const got=ENTS.find(e=>e.toLowerCase()===n.replace(/[\/\\:]/g,'-').toLowerCase())||ENTS[ENTS.length-1];sel.innerHTML=entOpts(got);prev=sel.value;done();toast('已添加公司')}catch(e){toast('只能在电脑上添加公司')}};
+ ok.onclick=add;inp.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();add()}if(e.key==='Escape')no.click()})})}
+/* ---- refresh: re-apply the installed rules to the results you already have ---- */
+/* ---- updates from GitHub ---- */
+let UPD={};
+async function checkUpdate(force){try{UPD=await api('/api/update'+(force?'?force=1':''))}catch(e){return}updBanner();if($('#s-ver'))verCard()}
+function updBanner(){let b=$('#upd');if(!UPD.available&&!UPD.busy&&!UPD.ready){if(b)b.remove();return}
+ if(!b){b=document.createElement('div');b.id='upd';b.className='stale';b.style.bottom='auto';b.style.top='12px';document.body.appendChild(b)}
+ const step={downloading:'正在下载…',unpacking:'正在解压…',installing:'正在安装…',libraries:'正在安装需要的组件…'}[UPD.step]||'正在更新…';
+ b.innerHTML=UPD.ready?`<span>新版本 ${UPD.latest} 已装好。</span><button class="btn primary" id="upd-go">重新启动</button>`
+  :UPD.busy?`<span>${step}</span>`
+  :UPD.error&&UPD.step==='failed'?`<span>更新失败:${UPD.error}</span><button class="btn" id="upd-x">关闭</button>`
+  :`<span>有新版本 <b>${UPD.latest}</b>(现在是 ${UPD.current})</span>${UPD.can_auto?'<button class="btn primary" id="upd-go">更新</button>':`<button class="btn primary" id="upd-page">下载</button>`}<button class="btn" id="upd-x">以后再说</button>`;
+ const g=$('#upd-go');if(g)g.onclick=async()=>{if(UPD.ready){b.innerHTML='<span>正在重新启动…</span>';await api('/api/restart',{}).catch(()=>{});return}
+  const r=await api('/api/update-start',{});if(r.error){toast('更新失败:'+r.error);return}UPD=r;updBanner();const t=setInterval(async()=>{UPD=await api('/api/update');updBanner();if(!UPD.busy)clearInterval(t)},1200)};
+ const pg=$('#upd-page');if(pg)pg.onclick=()=>window.open(UPD.page,'_blank');
+ const x=$('#upd-x');if(x)x.onclick=()=>b.remove()}
+function verCard(){const b=$('#s-ver');if(!b)return;b.innerHTML=`<p>现在的版本:<b>${UPD.current||'?'}</b>${UPD.latest?`;GitHub 上最新:<b>${UPD.latest}</b>`:''}</p><p>${UPD.available?'有新版本,可以更新。':UPD.error?'检查不到(没有网络?)':'已经是最新版本。'}</p><button class="btn" id="v-chk">检查更新</button>${UPD.available?' <button class="btn primary" id="v-up">更新</button>':''}`;
+ $('#v-chk').onclick=()=>checkUpdate(true).then(()=>toast(UPD.available?'有新版本':'已经是最新版本'));if($('#v-up'))$('#v-up').onclick=()=>{updBanner();$('#upd-go')&&$('#upd-go').click()}}
+setTimeout(()=>checkUpdate(false),4000);
+function staleBanner(on){let b=$('#stale');if(!b){b=document.createElement('div');b.id='stale';b.className='stale';b.hidden=true;b.innerHTML='<span>已安装了新版本。请关闭并重新打开 App,新功能才会生效。</span>';document.body.appendChild(b)}b.hidden=!on}
+async function refresh(){const b=$('#rfsh');if(b)b.disabled=true;try{const r=await api('/api/refresh',{});if(r.error){toast('刷新失败:'+r.error)}else{ROWS=r.rows;staleBanner(r.stale);render();toast(r.stale?'已刷新。但新版本需要重新打开 App 才会生效':'已刷新')}}finally{if(b)b.disabled=false}}
+let _rr=0;async function reread(){const b=$('#h-rr');if(Date.now()-_rr>6000){_rr=Date.now();if(b)b.textContent=trs('再点一次确认:重新识别需要几分钟,你的更正、旋转和拼接都会保留');return}_rr=0;await api('/api/reread',{});progress()}
+/* ---- join pieces by hand ---- */
+async function joinPanel(r){const d=await api('/api/pieces');let ALL=d.pieces||[];ALL=[...ALL.filter(x=>x.scan===(r.source_scan||'')),...ALL.filter(x=>x.scan!==(r.source_scan||''))];let pick=[r.id],showAll=false;
+ /* only pieces still open (needs checking / on hold); filed and duplicate ones are hidden unless asked for */
+ const BY=Object.fromEntries(ROWS.map(x=>[x.id,x])),open=x=>{const w=BY[x.id];return x.id===r.id||!w||!(isOk(w)||w.duplicate)};let P;
+ const el=document.createElement('div');el.className='dlg';document.body.appendChild(el);
+ const draw=()=>{P=ALL.filter(x=>showAll||open(x)||pick.includes(x.id));const hid=ALL.length-ALL.filter(open).length;el.innerHTML=`<div role="dialog" aria-label="Join pieces"><h3>把几段拼成一张单据</h3><p>先点最上面的一段,再按从上到下的顺序点其余各段,图上的数字就是顺序。每一段要先转正(在单据页用 [ ] 键旋转)。重叠的部分不会自动去掉,请只选各段不重叠的部分,或选完后检查图片。</p><div class="pk">${P.map(x=>{const i=pick.indexOf(x.id);return `<button type="button" data-id="${x.id}" aria-pressed="${i>=0}"><img loading="lazy" src="${crop(x.id)}" alt=""><small>${x.id}</small>${i>=0?`<span class="n">${i+1}</span>`:''}</button>`}).join('')}</div><div class="acts">${hid?`<label style="margin-right:auto;display:flex;gap:6px;align-items:center"><input type="checkbox" id="jall" style="width:auto" ${showAll?'checked':''}> 也显示已归档的 ${hid} 张</label>`:''}<button class="btn" id="jx">取消</button><button class="btn primary" id="jo" ${pick.length<2?'disabled':''}>按这个顺序拼接</button></div></div>`;
+  el.querySelectorAll('.pk button').forEach(b=>b.onclick=()=>{const i=pick.indexOf(b.dataset.id);if(i>=0)pick.splice(i,1);else pick.push(b.dataset.id);draw()});
+  el.querySelector('#jx').onclick=()=>el.remove();if(el.querySelector('#jall'))el.querySelector('#jall').onchange=e=>{showAll=e.target.checked;draw()};
+  el.querySelector('#jo').onclick=async()=>{const box=el.querySelector('[role=dialog]'),t0=Date.now();box.innerHTML=`<h3>正在拼接并识别…</h3><p>正在读取日期、总额和商家,通常需要大约 1 分钟。请不要关闭 App。</p><p class="jt" style="font-size:22px;font-weight:600">0 秒</p>`;const tick=setInterval(()=>{const e=box.querySelector('.jt');if(e)e.textContent=Math.round((Date.now()-t0)/1000)+' 秒'},1000);let res;try{res=await api('/api/join',{ids:pick})}catch(e){res={error:String(e)}}clearInterval(tick);if(res.error){toast('拼接失败:'+res.error);draw();return}el.remove();ROWS=res.rows;SEL=res.id;TAB='all';VIEW='all';FILT=null;MD=true;show();toast('已拼接,请检查拼好的单据')}};
+ draw()}
+/* ---- PDF summary: where the money went ---- */
+function reportPanel(){const ms=[...new Set(ROWS.filter(r=>r.date).map(r=>r.date.slice(0,7)))].sort(),ents=[...new Set([...ENTS,...ROWS.map(r=>r.entity)])].filter(Boolean);
+ if(!ms.length){toast('还没有有日期的单据');return}
+ const ym=m=>LANG==='en'?m:`${m.slice(0,4)}年${+m.slice(5)}月`,mo=sel=>ms.map(m=>`<option value="${m}" ${m===sel?'selected':''}>${ym(m)}</option>`).join('');
+ const y=ms[ms.length-1].slice(0,4),from=ms.find(m=>m.startsWith(y))||ms[0];
+ const el=document.createElement('div');el.className='dlg';document.body.appendChild(el);
+ el.innerHTML=`<div role="dialog" aria-label="PDF summary"><h3>PDF 支出总结</h3><p>做一份可以分享的 PDF:总支出、按分类、按月份、花最多的商家、水电账单,最后附上全部明细。只算已经确认的单据;还没确认、搁置和重复的不算进去。</p>
+ <div style="display:grid;gap:12px;padding:4px 18px 8px"><label>归属<select id="rp-e"><option value="">全部</option>${ents.map(x=>`<option>${x.replace(/</g,'&lt;')}</option>`).join('')}</select></label>
+ <div class="two"><label>开始月份<select id="rp-s">${mo(from)}</select></label><label>结束月份<select id="rp-t">${mo(ms[ms.length-1])}</select></label></div>
+ <div style="display:flex;gap:6px;flex-wrap:wrap">${[['本月',ms[ms.length-1],ms[ms.length-1]],['今年',from,ms[ms.length-1]],['全部',ms[0],ms[ms.length-1]]].map(([l,a,b])=>`<button type="button" class="btn" data-q="${a}|${b}">${l}</button>`).join('')}</div></div>
+ <div class="acts"><button class="btn" id="rp-x">取消</button><button class="btn primary" id="rp-go">制作 PDF</button></div></div>`;
+ el.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{const[a,c]=b.dataset.q.split('|');el.querySelector('#rp-s').value=a;el.querySelector('#rp-t').value=c});
+ el.querySelector('#rp-x').onclick=()=>el.remove();
+ el.querySelector('#rp-go').onclick=async()=>{let a=el.querySelector('#rp-s').value,b=el.querySelector('#rp-t').value;if(a>b)[a,b]=[b,a];
+  const g=el.querySelector('#rp-go');g.disabled=true;g.textContent='正在制作…';
+  const r=await api('/api/report',{entity:el.querySelector('#rp-e').value,start:a,end:b,lang:LANG});
+  if(r.error){toast('出错了:'+r.error);g.disabled=false;g.textContent='制作 PDF';return}
+  el.remove();toast(r.pdf?'PDF 已做好并打开,存在结果文件夹的 Reports 里':'找不到 Google Chrome,所以存成了网页并已打开;可以按 ⌘P 存成 PDF')}}
+/* ---- re-crop: draw the receipts on the original scan yourself ---- */
+async function cropPanel(r){const info=await api('/api/scan-info?id='+encodeURIComponent(r.id));if(info.error){toast('打不开原始扫描页:'+info.error);return}
+ let B=info.boxes.filter(b=>!b.locked).map(b=>b.box.slice()),changed=false,armed=false;const L=info.boxes.filter(b=>b.locked);
+ const el=document.createElement('div');el.className='dlg wide';document.body.appendChild(el);
+ el.innerHTML=`<div role="dialog" aria-label="Re-crop"><h3>重新切割:${info.scan}</h3><p>这页上的每一张单据都要有一个框:按住鼠标拖出框,框住一整张单据。没有被框到的,不会出现在列表里。点框右上角的 ✕ 删除。没改动的框会保留原来的识别结果和你的更正。这页如果根本不是单据(例如纸的背面),就把框全部删掉。灰色虚线框是已经和别的扫描页拼接的,这里不能改。</p><div class="cr"><div class="st"><img alt="" src="/scan?id=${encodeURIComponent(r.id)}&t=${T}"></div></div><div class="acts"><button class="btn" id="cclr">全部清除</button>${info.can_undo?'<button class="btn" id="cun">撤销上次切割</button>':''}<span style="margin-right:auto"></span><button class="btn" id="cx">取消</button><button class="btn primary" id="cgo">保存并重新识别</button></div></div>`;
+ const st=el.querySelector('.st'),img=st.querySelector('img');const k=()=>img.clientWidth/info.w;
+ const draw=()=>{st.querySelectorAll('.bx').forEach(x=>x.remove());const f=k();
+  const add=(b,i,lk)=>{const d=document.createElement('div');d.className='bx'+(lk?' lk':'');Object.assign(d.style,{left:b[0]*f+'px',top:b[1]*f+'px',width:(b[2]-b[0])*f+'px',height:(b[3]-b[1])*f+'px'});
+   d.innerHTML=`<b>${lk?'已拼接':i+1}</b>${lk?'':'<button type="button" title="删除这个框">✕</button>'}`;if(!lk)d.querySelector('button').onclick=e=>{e.stopPropagation();B.splice(i,1);changed=true;armed=false;draw()};
+   d.addEventListener('pointerdown',e=>e.stopPropagation());st.appendChild(d)};
+  L.forEach(b=>add(b.box,0,true));B.forEach((b,i)=>add(b,i,false));const g=el.querySelector('#cgo');g.textContent=armed?(B.length?`确定:这页一共 ${B.length} 张单据`:'确定:这页没有单据'):(B.length?`保存(这页 ${B.length} 张)`:'这页没有单据,保存');};
+ img.onload=draw;if(img.complete)draw();window.addEventListener('resize',draw);
+ let s0=null,tmp=null;
+ st.addEventListener('pointerdown',e=>{const R=st.getBoundingClientRect();s0=[e.clientX-R.left,e.clientY-R.top];tmp=document.createElement('div');tmp.className='bx';st.appendChild(tmp);st.setPointerCapture(e.pointerId)});
+ st.addEventListener('pointermove',e=>{if(!s0)return;const R=st.getBoundingClientRect(),x=Math.max(0,Math.min(R.width,e.clientX-R.left)),y=Math.max(0,Math.min(R.height,e.clientY-R.top));
+  Object.assign(tmp.style,{left:Math.min(s0[0],x)+'px',top:Math.min(s0[1],y)+'px',width:Math.abs(x-s0[0])+'px',height:Math.abs(y-s0[1])+'px'});tmp.dataset.b=[s0[0],s0[1],x,y].join()});
+ st.addEventListener('pointerup',()=>{if(!s0)return;const v=(tmp.dataset.b||'').split(',').map(Number);tmp.remove();s0=null;
+  if(v.length===4&&Math.abs(v[2]-v[0])>15&&Math.abs(v[3]-v[1])>15){const f=k();B.push([Math.min(v[0],v[2])/f,Math.min(v[1],v[3])/f,Math.max(v[0],v[2])/f,Math.max(v[1],v[3])/f].map(Math.round));changed=true;armed=false}draw()});
+ const close=()=>{window.removeEventListener('resize',draw);el.remove()};
+ el.querySelector('#cx').onclick=close;if(el.querySelector('#cun'))el.querySelector('#cun').onclick=async()=>{const x=await api('/api/uncrop',{id:r.id});if(x.error){toast('出错了:'+x.error);return}close();ROWS=x.rows;SEL=(x.ids||[])[0]||null;TAB='all';VIEW='all';FILT=null;MD=!!SEL;show();toast('已撤销上次切割,现在显示的是原来的单据')};el.querySelector('#cclr').onclick=()=>{B=[];changed=true;armed=false;draw()};
+ el.querySelector('#cgo').onclick=async()=>{if(!changed){close();return}
+  if(!armed){armed=true;draw();toast(B.length?`请确认:这页一共 ${B.length} 张单据?没框到的部分不会出现在列表里。`:'再点一次确认:这页的单据会从列表里移除(原图和旧的切图都会保留)');return}
+  const res=await api('/api/recrop',{id:r.id,boxes:B});if(res.error){toast('出错了:'+res.error);return}close();SEL=null;MD=false;progress()}}
+/* ---- categories: choose from a list (editable here). Tax tags are NOTES for the accountant, not tax rulings. ---- */
+const CATS=[['Household & maintenance',['Hardware & supplies','Repairs & maintenance','Furniture & fittings']],['Food & beverages',['Dining out','Drinks & desserts']],['Groceries',['Food & household essentials']],['Transport',['Fuel','Tyres & vehicle maintenance','Parking & tolls','Public transport']],['Health & medical',['Eyewear','Clinic & doctor','Dental','Hospital']],['Medicine',['Pharmacy & medicine','Vitamins & supplements','Medical supplies']],['Pets',['Pet food & supplies','Vet & pet clinic','Grooming & boarding']],['Hotel & accommodation',['Hotel','Homestay & Airbnb','Resort']],['Shopping',['Clothing & footwear','Sportswear & equipment','Electronics & accessories','Books & stationery']],['Utilities',['Electricity','Water','Sewerage','Internet & phone','TV & streaming','Gas','Assessment & land tax','Other bills']],['Education',['Courses & fees']],['Office & business',['Office supplies','Equipment','Services & subscriptions']],['Uncategorised',['Needs category']]];
+const TAXTAGS=['Education','Local travel','Medical expenses (serious diseases)','Sport equipment','Lifestyle','EV charging / food waste composting machine','Basic supporting equipment','Medical expenses for parents','Breastfeeding equipment','Childcare / kindergarten fees'];
+const BILLT=[['Electricity','电费'],['Water','水费'],['Sewerage','排污 (IWK)'],['Internet & phone','网络 / 电话'],['TV & streaming','电视'],['Gas','煤气'],['Assessment & land tax','地税 / 门牌税'],['Other bills','其他账单']];
+function catOpts(r){if(r.is_bill&&!r.card_slip_of){const cur=r.category==='Utilities'?r.subcategory:'';return (cur&&!BILLT.some(([v])=>v===cur)?`<option value="Utilities | ${cur}" selected>${cur}</option>`:'')+BILLT.map(([v,l])=>`<option value="Utilities | ${v}" ${v===cur?'selected':''}>${l}</option>`).join('')}
+ const cur=`${r.category} | ${r.subcategory||''}`;let seen=false;const o=CATS.map(([c,ss])=>`<optgroup label="${c}">${ss.map(s=>{const v=`${c} | ${s}`,sel=v===cur;seen=seen||sel;return `<option value="${v}" ${sel?'selected':''}>${s}</option>`}).join('')}</optgroup>`).join('');return seen?o:`<option value="${cur}" selected>${r.category} / ${r.subcategory||''}</option>`+o}
+function taxOpts(r){return `<option value="-">—</option>`+TAXTAGS.map(t=>`<option ${t===r.tax_tag?'selected':''}>${t}</option>`).join('')}
+/* ---- language: Chinese / English ---- */
+let LANG='en';try{LANG=localStorage.getItem('ro_lang')==='zh'?'zh':'en'}catch(e){}
+const EN_RE=[
+ [/已整理 (\d+) 张单据,其中 (\d+) 张需要你确认。/g,'$1 receipts organised, $2 need your check.'],
+ [/有 (\d+) 张需要你看一眼:日期或总额不确定、可能被切到、可能重复。/g,'$1 receipt(s) need a look: date or total uncertain, possibly cut off, or possibly duplicated.'],
+ [/另有 (\d+) 张搁置中,在“搁置”里可以找到。/g,'$1 more on hold; find them under “On hold”.'],
+ [/也显示已归档的 (\d+) 张/g,'Also show the $1 filed'],
+ [/新版本 ([\d.]+) 已装好。/g,'Version $1 is installed.'],
+ [/\(现在是 ([\d.]+)\)/g,' (you have $1)'],
+ [/⚠ 有 (\d+) 张可能是重复扫描的单据/g,'⚠ $1 receipt(s) may be duplicate scans'],
+ [/⚠ 有 (\d+) 张可能是重复扫描。/g,'⚠ $1 may be duplicate scans.'],
+ [/全部删除\((\d+) 张\)/g,'Delete all ($1)'],
+ [/再点一次:确定删除 (\d+) 张/g,'Click again to delete $1'],
+ [/已删除 (\d+) 张重复的单据/g,'Deleted $1 duplicate(s)'],
+ [/已认识 (\d+) 个地点的户口号码。/g,'Knows the account numbers of $1 properties.'],
+ [/正在从已有的账单学习每个地点的户口号码… (\d+)\/(\d+)/g,'Learning each property’s account number from your existing bills… $1/$2'],
+ [/保存\(这页 (\d+) 张\)/g,'Save ($1 on this page)'],
+ [/确定:这页一共 (\d+) 张单据/g,'Yes: this page has $1 receipt(s)'],
+ [/请确认:这页一共 (\d+) 张单据?没框到的部分不会出现在列表里。/g,'Please confirm: this page has $1 receipt(s)? Anything not boxed will not appear in the list.'],
+ [/^(\d+) 秒$/g,'$1 s'],
+ [/(\d+) 张 · /g,'$1 receipts · '],
+ [/日期:OCR 读成 (.+?)\s*、AI 读成 (.+)/g,'Date: OCR read $1, AI read $2'],
+ [/总额:OCR 读成 (.+?)\s*、AI 读成 (.+)/g,'Total: OCR read $1, AI read $2'],
+];
+const EN_STR=Object.entries({
+ '单据整理':'Receipt Organizer','首页':'Home','待确认':'To check','全部单据':'All receipts','全部':'All','按公司 / 年 / 月':'By company / year / month','月份':'Months','设置':'Settings',
+ '滚轮':'Wheel','缩放':'zoom','拖动':'Drag','平移':'pan','双击':'Double-click','100%/适合':'100% / fit','适合窗口':'Fit to window','适合':'Fit','关闭':'Close','没有日期':'No date',
+ '商家名称不在名单里,请对照图片确认或改正。':'Merchant name is not in the list. Check it against the image and confirm or correct it.',
+ '无法确定这张是否正着放,请看图;不对就按 [ 或 ] 旋转。':'Not sure this receipt is the right way up. Look at it; if not, press [ or ] to rotate.',
+ '这张可能被切到或需要手动旋转,请看图确认。':'This crop may be cut off or need manual rotation. Check the image.',
+ '读不出日期,请对照图片输入。':'Date could not be read. Type it in from the image.',
+ '日期不够确定,请确认。':'The date is not certain. Please confirm it.',
+ '两种识别读出的总额不同,请对照图片选一个。':'The two readers disagree on the total. Check the image and choose one.',
+ '和另一张的商家、日期、总额完全相同,可能是同一张单据扫了两次。':'Same merchant, date and total as another receipt: it may be the same receipt scanned twice.',
+ '总额只有一个来源读出,请核对。':'The total was read by only one source. Please check it.',
+ '商家不在名单里,请确认名称。':'Merchant is not in the list. Please confirm the name.',
+ '总额比小计还小,可能读错(也可能有折扣)。':'The total is below the subtotal: possibly misread (or there is a discount).',
+ '缩小 (-)':'Zoom out (-)','放大 (+)':'Zoom in (+)','向左转 90° ([)':'Rotate left 90° ([)','向右转 90° (])':'Rotate right 90° (])','实际大小 (1)':'Actual size (1)','放大窗口 (空格)':'Enlarge (Space)','放大窗口':'Enlarge window',
+ '已旋转':'Rotated','未识别商家':'Merchant not recognised','结果文件夹:':'Results folder: ',
+ '还没有单据。从下面开始导入,或到“设置”切换到你之前的结果文件夹。':'No receipts yet. Start by importing below, or go to “Settings” to switch to your earlier results folder.',
+ '导入扫描件':'Import scans',
+ '选一个放扫描页的文件夹:自动切出每张单据、摆正、拼接长单据、识别商家/日期/总额。原图不会被改动。':'Pick the folder with your scanned pages. Each receipt is cut out and straightened, long receipts are joined, and merchant, date and total are read. Your original scans are never changed.',
+ '这批单据归属':'These receipts belong to','选择文件夹并开始':'Choose folder and start','没有需要确认的单据。':'Nothing needs checking.','开始确认':'Start checking','浏览单据':'Browse receipts',
+ '按公司 / 年 / 月查看已归档的单据,可放大检查。':'View filed receipts by company / year / month, and zoom in to check them.',
+ '交给会计':'For the accountant',
+ '导出 Excel / CSV:按公司和月份分表,待核对的单据单独放一页,不会混进总数。':'Export Excel / CSV: one sheet per company and month. Receipts still to be checked go on a separate sheet and are not mixed into the totals.',
+ '导出失败:':'Export failed: ','已导出,并在 Finder 中打开':'Exported and opened in Finder','导出':'Export','结果文件夹':'Results folder',
+ '整理好的文件在 Finder 里按 公司/年/月 存放,另有 index.csv。':'Organised files are stored in Finder by company/year/month, plus an index.csv.','在 Finder 中打开':'Open in Finder',
+ '公司 / 归属名称':'Company / owner names','公司 / 归属':'Company / owner','单据':'Receipts','已读出总额':'Total read',
+ '点一个月份,只看那个月的单据。':'Click a month to see only that month’s receipts.','还没有单据':'No receipts yet',
+ '这些设置保存在这台电脑上。':'These settings are saved on this computer.','每次打开会自动回到这个文件夹。要看别的批次,在这里切换。':'The app reopens on this folder each time. To look at another batch, switch here.','切换结果文件夹':'Switch results folder',
+ '每行一个,例如 Personal、你的公司名。导入时可选择,单据会按它分文件夹。':'One per line, e.g. Personal or your company name. You pick one when importing, and receipts are filed into folders by it.',
+ '保存':'Save','手机访问':'Phone access','已保存':'Saved',
+ '只在同一个 Wi-Fi 下可用,需要 PIN。连接是 HTTP(未加密),所以不要在公共 Wi-Fi 使用。要在外面看,请用 Tailscale 之类的私人网络,不要把电脑端口开放到公网。手机上只能查看和确认单据,不能导入或改设置。':'Works only on the same Wi-Fi and needs the PIN. The connection is plain HTTP (not encrypted), so do not use it on public Wi-Fi. To view from outside, use a private network such as Tailscale, and never open this computer’s port to the public internet. On a phone you can only view and confirm receipts, not import or change settings.',
+ '已开启。在手机浏览器打开:':'On. Open this in your phone’s browser:','找不到本机局域网地址':'local network address not found','重新生成 PIN':'New PIN','已更换,旧的手机需要重新登录':'changed. Old phones must log in again',
+ '已设为关闭,重新打开 App 后生效':'Set to off. Takes effect after reopening the app.','已设为开启,请关闭并重新打开 App 后生效。':'Set to on. Close and reopen the app for it to take effect.','改回关闭':'Turn off again',
+ '用手机看单据、确认日期和总额。默认关闭。':'View receipts and confirm dates and totals on your phone. Off by default.','开启手机访问':'Turn on phone access','已设为开启,请关闭并重新打开 App':'Set to on. Close and reopen the app.',
+ '选择已有的结果文件夹(里面有 Organised Receipts)':'Choose an existing results folder (one containing Organised Receipts)','选择放扫描页的文件夹':'Choose the folder with your scanned pages',
+ '这里没有单据':'No receipts here','回到“首页”导入扫描件,或在“设置”切换结果文件夹。':'Go back to “Home” to import scans, or switch the results folder in “Settings”.',
+ '清除筛选':'Clear filter','张单据':'receipts','需要你确认':'need your check','已读出的总额合计':'total read so far','需要确认':'Needs checking','已归档':'Filed','这一类里没有单据。':'No receipts in this group.','也显示已归档的':'Also show filed','正在下载…':'Downloading…','正在解压…':'Unpacking…','正在安装…':'Installing…','正在安装需要的组件…':'Installing required components…','正在更新…':'Updating…','重新启动':'Restart','正在重新启动…':'Restarting…','更新失败:':'Update failed: ','更新':'Update','下载':'Download','以后再说':'Later','版本与更新':'Version and updates','现在的版本:':'This version: ',';GitHub 上最新:':'; latest on GitHub: ','有新版本,可以更新。':'A new version is available.','检查不到(没有网络?)':'Could not check (no internet?)','已经是最新版本。':'You have the latest version.','检查更新':'Check for updates','有新版本':'New version','已经是最新版本':'Up to date','PDF 总结':'PDF summary','导出 Excel':'Export Excel','PDF 支出总结':'PDF spending summary','做一份可以分享的 PDF:总支出、按分类、按月份、花最多的商家、水电账单,最后附上全部明细。只算已经确认的单据;还没确认、搁置和重复的不算进去。':'A PDF you can share: total spent, by category, by month, top shops, utility bills, and the full list at the end. Only confirmed receipts are counted; ones still to check, on hold or duplicates are left out.','开始月份':'From month','结束月份':'To month','本月':'This month','今年':'This year','制作 PDF':'Make PDF','正在制作…':'Making…','还没有有日期的单据':'No dated receipts yet','PDF 已做好并打开,存在结果文件夹的 Reports 里':'PDF made and opened; saved in the Reports folder of your results folder','找不到 Google Chrome,所以存成了网页并已打开;可以按 ⌘P 存成 PDF':'Google Chrome was not found, so it was saved as a web page and opened; press ⌘P to save it as PDF','搜索店名、金额或日期,例如 jaya、154.90、13/10':'Search shop, amount or date, e.g. jaya, 154.90, 13/10','日/月/年':'dd/mm/yyyy','日期看不懂,请用 日/月/年,例如 13/10/2026':'Date not understood. Use day/month/year, e.g. 13/10/2026','撤销':'Undo','已恢复':'Restored','查看':'View','这里是可能重复扫描的单据。打开一张可以和原来那张对比,再决定删除还是保留。':'These may be duplicate scans. Open one to compare it with the original, then delete or keep it.','⚠ 可能是重复扫描':'⚠ Possibly a duplicate scan',',和这张很像:':'; it looks like this one:','点一下打开比较':'click to open and compare','删除这张':'Delete this one','不是重复,两张都保留':'Not a duplicate, keep both','再点一次确认删除':'Click again to delete','已删除这张重复的单据':'Deleted this duplicate','已保留,两张都会算':'Kept; both are counted','还没有设置账单文件夹。到「设置」里选择,确认好的账单就会自动存进去。':'No bills folder set yet. Choose one in Settings and confirmed bills will be saved there automatically.','按户口号码自动认出':'recognised from the account number','按你之前的选择认出':'recognised from your earlier choice','按账单上的地址认出':'recognised from the address on the bill','你选的':'your choice','✓ 已存到:':'✓ Saved to: ','认不出是哪一个地点,请从上面选一个。以后同一个户口号码会自动认出。':'Could not tell which property this is. Choose one above; the same account number will be recognised next time.','填好日期后才能存。':'Fill in the date first.','确认无误后会存到:':'After you confirm, it will be saved to: ','会存到:':'Will be saved to: ','存到账单文件夹:':'Bills folder: ','— 请选择地点 —':'— choose property —','已记住:以后同一个户口号码会自动放到这里':'Remembered: the same account number will go here automatically','账单文件夹':'Bills folder','确认好的水电、电话、网络、地税等账单,会自动复制到这里,按 类型 / 地点 / 年份 存放,文件名跟你原来的一样(例如 shop october 2026)。只会新增文件,不会删除或覆盖。':'Confirmed bills (electricity, water, phone, internet, land tax …) are copied here automatically, by type / property / year, named like your own files (e.g. shop october 2026). Files are only added, never deleted or overwritten.','还没有选择':'not chosen yet','选择账单文件夹':'Choose bills folder','重新学习':'Learn again','正在学习,完成后会自动把确认好的账单存进去':'Learning; confirmed bills will be saved there when it finishes','账单 · 需要确认':'Bill · needs checking','账单 · 已归档':'Bill · filed','账单':'Bills','不是账单':'Not a bill','这是账单':'This is a bill','账单(水电、电话、网络、门牌税、地税等)和单据分开存放':'Bills (electricity, water, phone, internet, assessment, land tax …) are stored apart from receipts','已改成单据':'Changed to a receipt','已改成账单,请选择账单类型和地点':'Changed to a bill. Choose the bill type and the property','已改好类型,请确认地点':'Type changed; please check the property','账单类型:':'Bill type:','账单类型':'Bill type','电费':'Electricity','水费':'Water','排污 (IWK)':'Sewerage (IWK)','网络 / 电话':'Internet / phone','电视':'TV','煤气':'Gas','地税 / 门牌税':'Land tax / assessment','其他账单':'Other bill','已改成账单,存放在 Utility Bills':'Changed to a bill; stored in Utility Bills','刷卡单 · 已和单据放在一起':'Card slip · kept with its receipt','查看那张单据':'Open that receipt','不是同一笔付款':'Not the same payment','已分开,不会再把它们放在一起':'Separated; they will not be paired again','附带银行刷卡单(同一笔付款,不另算总额):':'Bank card slip attached (same payment, not counted again):','这是银行刷卡单,但没找到同一天、同金额的单据,所以它自己算一笔。如果单据之后才扫描进来,刷新后会自动放在一起。':'This is a bank card slip, but no receipt with the same day and amount was found, so it counts on its own. If the receipt is scanned later, Refresh will put them together.','这是 ':'This is the bank card slip for ',' 的银行刷卡单,已经和那张单据放在一起,不会另外算进总额。':'. It is kept with that receipt and not counted again.','重新切割…':'Re-crop…','打开原始扫描页,自己框出每一张单据':'Open the original scan and draw a box around each receipt yourself','重新切割:':'Re-crop: ','打不开原始扫描页:':'Cannot open the original scan: ','全部清除':'Clear all','撤销上次切割':'Undo last re-crop','已撤销上次切割,现在显示的是原来的单据':'Last re-crop undone; showing the earlier receipt','确定:这页没有单据':'Yes: no receipts on this page','保存并重新识别':'Save and read again','这页没有单据,保存':'No receipts on this page, save','已拼接':'Joined','删除这个框':'Delete this box','这页上的每一张单据都要有一个框:按住鼠标拖出框,框住一整张单据。没有被框到的,不会出现在列表里。点框右上角的 ✕ 删除。没改动的框会保留原来的识别结果和你的更正。这页如果根本不是单据(例如纸的背面),就把框全部删掉。灰色虚线框是已经和别的扫描页拼接的,这里不能改。':'Every receipt on this page needs its own box: drag to draw a box around one whole receipt. Anything not boxed will not appear in the list. Click ✕ on a box to delete it. Boxes you do not change keep their reading and your corrections. If this page is not a receipt at all (e.g. the back of the paper), delete all boxes. Grey dashed boxes are joined with another scan and cannot be changed here.','再点一次确认:这页的单据会从列表里移除(原图和旧的切图都会保留)':'Click again to confirm: this page’s receipts will be removed from the list (the original scan and old crops are kept)','正在拼接并识别…':'Joining and reading…','正在读取日期、总额和商家,通常需要大约 1 分钟。请不要关闭 App。':'Reading the date, total and merchant. This usually takes about 1 minute. Please keep the app open.','已拼接,请检查拼好的单据':'Joined. Please check the joined receipt','请先填日期,不然没办法按年 / 月归档':'Fill in the date first; it is needed to file by year / month','请先填总额':'Fill in the total first','请先填商家名称':'Fill in the merchant first','已标记为重复扫描,移到“重复”(不算进总额)':'Marked as a duplicate scan and moved to “Duplicates” (not counted in totals)','重复扫描':'Duplicate scan','重复':'Duplicates','这张已标记为重复扫描(和另一张是同一张单据),不会算进总额。如果其实不是重复,勾选下面的方框再点“确认无误”。':'This is marked as a duplicate scan (the same receipt as another one) and is not counted in totals. If it is not a duplicate, tick the box below and click “Confirm and next”.','先放一边,之后在“搁置”里找到 (H)':'Set aside for later; find it under “On hold” (H)','已搁置,在“搁置”里可以找到':'Put on hold. Find it under “On hold”','已取消搁置':'Taken off hold','取消搁置':'Take off hold','已搁置':'On hold','搁置':'On hold','这张已搁置:不会算进总额,也不会出现在“需要确认”里。想好了就改好并点“确认无误”,或点“取消搁置”。':'This receipt is on hold: it is not counted in totals and not shown under “Needs checking”. When you decide, fix it and click “Confirm and next”, or click “Take off hold”.','返回列表':'Back to list',
+ '读出的内容互相一致,已归档。':'Everything read agrees, so it is filed.','商家':'Merchant','日期':'Date','总额(RM)':'Total (RM)','归属':'Owner','分类':'Category',
+ '这是另一张单据,不是重复扫描(不勾选就表示它是重复的)':'This is a different receipt, not a duplicate scan (unticked means it is a duplicate)',
+ '确认无误并看下一张':'Confirm and next','确认并下一张':'confirm and next','上/下一张':'previous / next','空格':'Space','放大图片':'enlarge image','旋转':'rotate','跳过不确认':'skip without confirming',
+ '已确认并归档':'Confirmed and filed','正在识别':'Reading receipts','出错了:':'Error: ','语言':'Language','再点一次确认:重新识别需要几分钟,你的更正、旋转和拼接都会保留':'Click again to confirm: reading again takes a few minutes; your corrections, rotations and joins are kept','↻ 刷新':'↻ Refresh','重新应用最新规则:改名、分类、重复检查。你的更正不会被覆盖':'Re-apply the latest rules: naming, categories, duplicate check. Your corrections are never overwritten','已安装了新版本。请关闭并重新打开 App,新功能才会生效。':'A newer version is installed. Close and reopen the app to use it.','刷新失败:':'Refresh failed: ','已刷新。但新版本需要重新打开 App 才会生效':'Refreshed. The newer version needs the app to be reopened.','已刷新':'Refreshed','用已安装的版本重新识别所有单据?这需要几分钟。你的更正、旋转和拼接都会保留。':'Read all receipts again with the installed version? This takes a few minutes. Your corrections, rotations and joins are kept.','刷新':'Refresh','装了新版本后点这里:用最新规则重新命名、分类和检查重复,几秒钟。你的更正不会被覆盖。':'After installing a new version, click here: re-name, re-categorise and re-check duplicates with the latest rules, in a few seconds. Your corrections are never overwritten.','重新识别全部…':'Read all again…','拼接其他段…':'Join other pieces…','撤销拼接':'Undo join','把几段拼成一张单据':'Join several pieces into one receipt','先点最上面的一段,再按从上到下的顺序点其余各段,图上的数字就是顺序。每一段要先转正(在单据页用 [ ] 键旋转)。重叠的部分不会自动去掉,请只选各段不重叠的部分,或选完后检查图片。':'Click the top piece first, then the others from top to bottom; the numbers show the order. Rotate each piece upright first (use the [ ] keys on the receipt page). Overlapping parts are not removed automatically, so check the joined image.','按这个顺序拼接':'Join in this order','正在拼接并识别,请稍候…':'Joining and reading, please wait…','拼接失败:':'Join failed: ','已拼接':'Joined','已撤销拼接':'Join undone','这张是自动拼接的,不能在这里撤销':'This one was joined automatically and cannot be undone here','＋ 添加公司…':'+ Add company…','公司名称':'Company name','添加':'Add','取消':'Cancel','已添加公司':'Company added','只能在电脑上添加公司':'Companies can only be added on the computer','税务标签(可选,仅作备注,请与会计确认)':'Tax tag (optional; a note only, confirm with your accountant)','小票上读到这个日期的那一行':'The line on the receipt where this date was read','小票上读到这个总额的那一行':'The line on the receipt where this total was read',
+}).sort((a,b)=>b[0].length-a[0].length);
+const trs=s=>{if(LANG!=='en'||!/[一-鿿]/.test(s))return s;for(const [r,v] of EN_RE)s=s.replace(r,v);for(const [k,v] of EN_STR)if(s.includes(k))s=s.split(k).join(v);return s};
+const ORIG=new WeakMap(),CJK=/[一-鿿]/;
+function applyLang(root){root=root||document.body;const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),ns=[];let n;while((n=w.nextNode()))ns.push(n);
+ for(const t of ns){if(!ORIG.has(t)){if(!CJK.test(t.nodeValue))continue;ORIG.set(t,t.nodeValue)}const o=ORIG.get(t),v=LANG==='en'?trs(o):o;if(t.nodeValue!==v)t.nodeValue=v}
+ (root.querySelectorAll?root.querySelectorAll('[placeholder]'):[]).forEach(e=>{if(e.dataset.zhp===undefined){if(!CJK.test(e.placeholder))return;e.dataset.zhp=e.placeholder}const v=LANG==='en'?trs(e.dataset.zhp):e.dataset.zhp;if(e.placeholder!==v)e.placeholder=v});
+ (root.querySelectorAll?root.querySelectorAll('[title]'):[]).forEach(e=>{if(e.dataset.zh===undefined){if(!CJK.test(e.title))return;e.dataset.zh=e.title}const v=LANG==='en'?trs(e.dataset.zh):e.dataset.zh;if(e.title!==v)e.title=v});
+ const tt=LANG==='en'?'Receipt Organizer':'单据整理';if(document.title!==tt)document.title=tt;document.documentElement.lang=LANG==='en'?'en':'zh-CN'}
+let _lp=false;new MutationObserver(()=>{if(_lp)return;_lp=true;queueMicrotask(()=>{_lp=false;applyLang()})}).observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['title','placeholder']});
+function setLang(l){LANG=l==='en'?'en':'zh';try{localStorage.setItem('ro_lang',LANG)}catch(e){}applyLang();document.querySelectorAll('[data-lang]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lang===LANG)))}
+document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));$('#rfsh').onclick=refresh;
+
+setLang(LANG);
+load();
+</script></body></html>
