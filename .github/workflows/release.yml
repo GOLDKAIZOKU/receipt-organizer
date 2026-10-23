@@ -1,26 +1,37 @@
-# Push a tag like v1.0.1 -> builds the Windows app and the Mac package, tests both, and publishes them as a GitHub Release.
+# When __version__ in receipt_organizer/__init__.py is a version that has no Release yet (pushed to main):
+# build the Windows app and the Mac package, test both, and publish them as Release v<version>.
 # The app checks this Release page and offers the update to everyone (Mac and Windows) at the same time.
 name: Release
 on:
   push:
-    tags: ['v*']
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: write
 
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      v: ${{ steps.v.outputs.v }}
+      new: ${{ steps.v.outputs.new }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        env: {GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'}
+        run: |
+          V=$(python3 -c "import re;print(re.search(r\"__version__ = '([^']+)'\",open('receipt_organizer/__init__.py').read()).group(1))")
+          echo "v=$V" >> "$GITHUB_OUTPUT"
+          if gh release view "v$V" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then echo "new=false" >> "$GITHUB_OUTPUT"; echo "v$V already released"; else echo "new=true" >> "$GITHUB_OUTPUT"; fi
+
   windows:
+    needs: version
+    if: needs.version.outputs.new == 'true'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: '3.11'}
-      - name: Version matches tag
-        if: startsWith(github.ref, 'refs/tags/')
-        shell: bash
-        run: |
-          V=$(python -c "import re;print(re.search(r\"__version__ = '([^']+)'\",open('receipt_organizer/__init__.py').read()).group(1))")
-          [ "v$V" = "${GITHUB_REF_NAME}" ] || { echo "__version__ $V does not match tag ${GITHUB_REF_NAME}"; exit 1; }
       - name: Install
         run: |
           python -m pip install --upgrade pip
@@ -45,6 +56,8 @@ jobs:
         with: {name: windows, path: 'ReceiptOrganizer-Windows-*.zip'}
 
   mac:
+    needs: version
+    if: needs.version.outputs.new == 'true'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -65,8 +78,7 @@ jobs:
         with: {name: mac, path: 'ReceiptOrganizer-Mac-*.zip'}
 
   release:
-    needs: [windows, mac]
-    if: startsWith(github.ref, 'refs/tags/')
+    needs: [version, windows, mac]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -75,5 +87,6 @@ jobs:
       - name: Publish release
         env: {GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'}
         run: |
-          NOTES=$(awk "/^## ${GITHUB_REF_NAME#v}/{f=1;next}/^## /{f=0}f" CHANGELOG.md)
-          gh release create "${GITHUB_REF_NAME}" out/*.zip --title "Receipt Organizer ${GITHUB_REF_NAME#v}" --notes "${NOTES:-See CHANGELOG.md}"
+          V=${{ needs.version.outputs.v }}
+          NOTES=$(awk "/^## ${V//./\\.}\$/{f=1;next}/^## /{f=0}f" CHANGELOG.md)
+          gh release create "v$V" out/*.zip --target "$GITHUB_SHA" --title "Receipt Organizer $V" --notes "${NOTES:-See CHANGELOG.md}"

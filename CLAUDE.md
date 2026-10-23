@@ -19,5 +19,5 @@ reads shop/date/total, and files them. The owner speaks Chinese; reply in Chines
 
 ## Releasing a new version (Mac and Windows together)
 1. Set `__version__` in `receipt_organizer/__init__.py`, add a `## x.y.z` section to `CHANGELOG.md`.
-2. `git commit`, `git tag vx.y.z`, `git push && git push --tags`.
-3. `.github/workflows/release.yml` builds + self-tests the Windows exe and the Mac package and publishes the Release; installed apps offer the update.
+2. `git commit` and `git push` to `main`.
+3. `.github/workflows/release.yml` sees a version with no Release yet, builds + self-tests the Windows exe and the Mac package and publishes the Release; installed apps offer the update.

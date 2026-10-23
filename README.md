@@ -43,7 +43,7 @@ App 打开时会检查 GitHub。有新版本会提示「有新版本 · 更新�
 ## Publishing a new version (for the maintainer)
 
 1. Change the code, set `__version__` in `receipt_organizer/__init__.py` (e.g. `1.0.1`) and add a `## 1.0.1` section to `CHANGELOG.md`.
-2. Commit, then tag and push: `git tag v1.0.1 && git push --tags`.
-3. GitHub Actions builds and tests the Windows app and the Mac package and publishes the Release. Every installed app then offers the update.
+2. Commit and push to `main`.
+3. GitHub Actions sees the new version number, builds and tests the Windows app and the Mac package and publishes the Release. Every installed app then offers the update.
 
 Run from source: `pip install -r requirements-mac.txt` (or `requirements-windows.txt`), then `python run_app.py`.
