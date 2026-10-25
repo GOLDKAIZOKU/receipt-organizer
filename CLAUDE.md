@@ -21,3 +21,6 @@ reads shop/date/total, and files them. The owner speaks Chinese; reply in Chines
 1. Set `__version__` in `receipt_organizer/__init__.py`, add a `## x.y.z` section to `CHANGELOG.md`.
 2. `git commit` and `git push` to `main`.
 3. `.github/workflows/release.yml` sees a version with no Release yet, builds + self-tests the Windows exe and the Mac package and publishes the Release; installed apps offer the update.
+4. The owner wants their Mac updated automatically after every release made in a chat: if their Mac is linked, install it there right away
+   (run the app's own updater from its project folder with its `.venv` python: `updater.check(force=True); updater.start()`, wait until
+   `info()['ready']`), then quit the running app and open `~/Applications/Receipt Organizer.app` again. Tell them it was done; don't ask them to click Update.
