@@ -17,16 +17,30 @@ def asset_name(tag):
     return f'ReceiptOrganizer-Windows-{v}.zip' if sysdeps.WIN else f'ReceiptOrganizer-Mac-{v}.zip'
 
 def check(force=False):
-    """Ask GitHub for the latest release (at most once an hour unless forced). Never raises."""
+    """Ask GitHub for the latest release (at most once an hour unless forced). Never raises.
+    Uses the normal release page (follows its redirect to /releases/tag/vX.Y.Z), which has no hourly limit;
+    GitHub's API allows only 60 checks an hour per internet connection, shared with every other app on it."""
     if not force and STATE['checked'] and time.time() - STATE['checked'] < 3600: return info()
     try:
-        req = urllib.request.Request(f'https://api.github.com/repos/{REPO}/releases/latest', headers={'Accept': 'application/vnd.github+json', 'User-Agent': 'ReceiptOrganizer'})
-        r = json.load(urllib.request.urlopen(req, timeout=8)); tag = r.get('tag_name', '')
-        want = asset_name(tag); a = next((x for x in r.get('assets', []) if x.get('name') == want), None)
-        STATE.update(checked=time.time(), latest=tag.lstrip('v'), notes=(r.get('body') or '')[:2000], asset=a and a.get('browser_download_url'), page=r.get('html_url'), error=None)
+        req = urllib.request.Request(f'https://github.com/{REPO}/releases/latest', headers={'User-Agent': 'ReceiptOrganizer'})
+        with urllib.request.urlopen(req, timeout=10) as r: final = r.geturl()
+        m = re.search(r'/releases/tag/(v?[\d.]+)$', final)
+        if not m: raise ValueError('no release published yet')
+        tag = m.group(1)
+        STATE.update(checked=time.time(), latest=tag.lstrip('v'), page=final, error=None,
+                     asset=f'https://github.com/{REPO}/releases/download/{tag}/{asset_name(tag)}', notes=_notes(tag))
     except Exception as e:
         STATE.update(checked=time.time(), error=str(e))
     return info()
+
+def _notes(tag):
+    """What changed, from CHANGELOG.md of that version (best effort)."""
+    try:
+        req = urllib.request.Request(f'https://raw.githubusercontent.com/{REPO}/{tag}/CHANGELOG.md', headers={'User-Agent': 'ReceiptOrganizer'})
+        t = urllib.request.urlopen(req, timeout=8).read().decode('utf-8', 'replace')
+        m = re.search(r'^## ' + re.escape(tag.lstrip('v')) + r'\s*$(.*?)(?=^## |\Z)', t, re.M | re.S)
+        return (m.group(1).strip() if m else '')[:2000]
+    except Exception: return ''
 
 def info():
     return dict(current=__version__, latest=STATE['latest'], available=bool(STATE['latest'] and newer(STATE['latest'], __version__) and STATE['asset']),

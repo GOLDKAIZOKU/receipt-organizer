@@ -1,5 +1,8 @@
 # Changes
 
+## 1.0.2
+- The update check no longer stops working when GitHub's hourly limit for your internet connection is reached.
+
 ## 1.0.1
 - Receipt pictures now show when the scanned file names contain spaces or other special characters.
 - If macOS blocks the bills folder, the app keeps working and Settings explains how to allow access.
