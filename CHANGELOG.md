@@ -1,5 +1,8 @@
 # Changes
 
+## 1.0.4
+- Possible duplicates: all copies are shown side by side, large, and you choose which to keep or delete (can be undone).
+
 ## 1.0.3
 - Dates: just type the digits (13102026 or 131026); the slashes appear by themselves.
 
