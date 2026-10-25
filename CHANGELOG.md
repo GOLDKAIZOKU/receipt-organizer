@@ -1,5 +1,9 @@
 # Changes
 
+## 1.0.1
+- Receipt pictures now show when the scanned file names contain spaces or other special characters.
+- If macOS blocks the bills folder, the app keeps working and Settings explains how to allow access.
+
 ## 1.0.0
 - First version on GitHub, for Mac and Windows.
 - Reads receipts and utility bills, files them by owner / year / month, joins long receipts, re-crop, card slips paired with their receipts, duplicate detection with delete and undo.

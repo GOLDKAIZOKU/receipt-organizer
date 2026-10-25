@@ -30,14 +30,26 @@ def type_folder(sub, merchant):
         else: want = 'Other bills'
     r = root()
     if r:
-        for d in os.listdir(r):
-            if d.lower() == want.lower() and os.path.isdir(os.path.join(r, d)): return d       # use the user's own spelling
+        try:
+            for d in os.listdir(r):
+                if d.lower() == want.lower() and os.path.isdir(os.path.join(r, d)): return d       # use the user's own spelling
+        except Exception: pass
     return want
+
+def access_error():
+    """None if the bills folder can be read, else why not (macOS privacy settings can block a Google Drive folder)."""
+    r = root()
+    if not r: return None
+    try: os.listdir(r); return None
+    except PermissionError: return 'permission'
+    except Exception as e: return str(e)
 
 def places(tf):
     """Property folders under one type folder (year folders are not properties)."""
     r = root()
     if not r or not os.path.isdir(os.path.join(r, tf)): return []
+    try: os.listdir(os.path.join(r, tf))
+    except Exception: return []
     return sorted(d for d in os.listdir(os.path.join(r, tf)) if os.path.isdir(os.path.join(r, tf, d)) and not d.startswith('.') and not re.fullmatch(r'(19|20)\d\d', d))
 
 # ---------- account numbers: what identifies a property ----------
@@ -87,7 +99,7 @@ def build_index(ocr, per_folder=3, log=lambda m: None):
     """Learn each property's account numbers from its newest few bills. Incremental: files already read are not read again.
     Reading a file that is only in the cloud makes Google Drive download it."""
     r = root()
-    if not r: return
+    if not r or access_error(): return
     idx = _load(INDEX, {}); idx.setdefault('files', {}); STATUS.update(running=True, error=None, done=0)
     try:
         jobs = []; layout = {}
@@ -115,7 +127,7 @@ def start_index(ocr):
 
 def summary():
     idx = _load(INDEX, {}); n = collections.Counter(v['place'] for v in idx.get('files', {}).values() if v.get('keys'))
-    return dict(root=root(), places=len(idx.get('layout', {})), learned=len(n), status=STATUS)
+    return dict(root=root(), places=len(idx.get('layout', {})), learned=len(n), status=STATUS, access=access_error())
 
 # ---------- which property a bill belongs to ----------
 def resolve(tf, text, corr):

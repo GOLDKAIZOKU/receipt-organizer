@@ -402,7 +402,9 @@ class H(BaseHTTPRequestHandler):
             return self._send(200, updater.check(force=q.get('force', ['0'])[0] == '1') if not updater.STATE['busy'] else updater.info())
         if u.path == '/api/bills-info':
             from . import bills
-            r = bills.root(); tfs = sorted(d for d in os.listdir(r) if os.path.isdir(os.path.join(r, d)) and not d.startswith('.')) if r else []
+            r = bills.root()
+            try: tfs = sorted(d for d in os.listdir(r) if os.path.isdir(os.path.join(r, d)) and not d.startswith('.')) if r else []
+            except Exception: tfs = []
             return self._send(200, dict(bills.summary(), places={t: bills.places(t) for t in tfs}))
         if u.path == '/api/scan-info':
             try: return self._send(200, scan_info(os.path.basename(urllib.parse.parse_qs(u.query).get('id', [''])[0])))
@@ -411,7 +413,8 @@ class H(BaseHTTPRequestHandler):
             try: _w, _s, scan = _scan_of(os.path.basename(urllib.parse.parse_qs(u.query).get('id', [''])[0])); return self._send(200, open(scan, 'rb').read(), 'image/png' if scan.lower().endswith('.png') else 'image/jpeg')
             except Exception as e: return self._send(404, {'error': str(e)})
         if u.path.startswith('/crop/'):
-            cid = os.path.basename(u.path[6:]).replace('.jpg', ''); f = os.path.join(STATE['out'], '.work', cid + '.jpg')
+            cid = os.path.basename(urllib.parse.unquote(u.path[6:])); cid = cid[:-4] if cid.endswith('.jpg') else cid   # names may have spaces etc.
+            f = os.path.join(STATE['out'], '.work', cid + '.jpg')
             if os.path.exists(f): return self._send(200, open(f, 'rb').read(), 'image/jpeg')
         self._send(404, {'error': 'not found'})
     def do_POST(self):
