@@ -1,5 +1,8 @@
 # Changes
 
+## 1.0.6
+- Far fewer false "possible duplicate" warnings: a piece that only looks similar at the bottom is flagged only when its other copy (same amount and day) is really there, and that copy is shown next to it. A receipt and its bank card slip are paired, not treated as duplicates.
+
 ## 1.0.5
 - Possible duplicates: the copies are shown side by side in the picture area, each with Enlarge and Delete.
 

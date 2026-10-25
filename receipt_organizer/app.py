@@ -105,7 +105,7 @@ def run(inp, out, entity, model='qwen3.5:9b', use_ai=True, log=print):
     for j in joins:
         a, b = items[j['a']], items[j['b']]
         if j['kind'] == 'duplicate_piece':
-            b['flags'].append('DUPLICATE_PIECE'); log(f'  {b["id"]} looks like the same piece as {a["id"]} (scanned twice)'); continue
+            b['flags'].append('DUPLICATE_PIECE'); b.setdefault('dup_piece_of', []).append(a['id']); log(f'  {b["id"]} looks like the same piece as {a["id"]} (scanned twice)'); continue
         img = j['image']; cands = [img, cv2.rotate(img, cv2.ROTATE_180)]
         img = orient.fix(img, model)[0] if use_ai else cands[int(max(range(2), key=lambda q: segment.score(cands[q])))]
         flags = [f for f in a['flags'] + b['flags'] if f not in ('CLIPPED_BY_SCAN_EDGE',)] + ['JOINED']
@@ -116,7 +116,7 @@ def run(inp, out, entity, model='qwen3.5:9b', use_ai=True, log=print):
     for it in items:
         cid = it['id']; t0 = time.time(); cp = os.path.join(work, cid + '.jpg'); cv2.imwrite(cp, it['crop'], [cv2.IMWRITE_JPEG_QUALITY, 95])
         rec = read_fields(it['crop'], model, use_ai, log)
-        rec.update(id=cid, source_scan=it['sources'][0], sources=it['sources'], box=it['boxes'][0], boxes=it['boxes'], crop_flags=it['flags'], crop_path=cp)
+        rec.update(id=cid, source_scan=it['sources'][0], sources=it['sources'], box=it['boxes'][0], boxes=it['boxes'], crop_flags=it['flags'], crop_path=cp, dup_piece_of=it.get('dup_piece_of', []))
         recs.append(rec); log(f'  {cid}: {rec["merchant"]} | ocr {rec["ocr_date"]} {rec["ocr_total"]} | ai {rec["ai_date"]} {rec["ai_total"]}  ({time.time()-t0:.0f}s)')
     ser = [dict(r, ocr_date=str(r['ocr_date']) if r['ocr_date'] else None, ai_date=str(r['ai_date']) if r['ai_date'] else None) for r in recs]
     json.dump(dict(model=model if use_ai else None, entity=entity, records=ser), open(os.path.join(work, 'records.json'), 'w'), ensure_ascii=False, indent=1, default=str)
@@ -126,6 +126,21 @@ def run(inp, out, entity, model='qwen3.5:9b', use_ai=True, log=print):
 
 FIELDSV = 1  # bump when shop-name / date reading improves, so older readings with no shop or date are read again
 SLIPV = 2   # bump when slip reading improves, so older readings are looked at again
+def piece_twin(r, recs, corr_all):
+    """The other copy of a piece flagged 'scanned twice': the piece it was matched with, or any other receipt with the same total on the
+    same day (or the same shop and day when no total was read). None when there is no such receipt, i.e. the flag was a false alarm."""
+    def same(o):
+        if o is r or o['id'] in (corr_all.get(r['id'], {}).get('not_dup_of') or []): return False
+        if is_slip(o, corr_all.get(o['id'], {})): return False
+        if r['total'] is not None and o['total'] is not None:
+            return abs(r['total'] - o['total']) < 0.005 and (not r['date'] or not o['date'] or r['date'] == o['date'])
+        return bool(r['merchant'] and r['merchant'] == o['merchant'] and r['date'] and r['date'] == o['date'])
+    named = [o for o in recs if o['id'] in (r.get('dup_piece_of') or []) and same(o)]
+    if named: return named[0]['id']
+    other = [o for o in recs if same(o)]
+    other.sort(key=lambda o: (o['source_scan'] == r['source_scan'], o['id']))
+    return other[0]['id'] if other else None
+
 def is_slip(r, corr): return bool((r.get('card_slip') or corr.get('card_slip')) and not corr.get('not_slip'))
 
 _GENERIC = {'sdn', 'bhd', 'the', 'and', 'enterprise', 'trading', 'restaurant', 'restoran', 'cafe', 'malaysia', 'store', 'shop', 'services', 'plt', 'kiara', 'bay'}
@@ -271,9 +286,11 @@ def _finalize(out, entity=None, log=print):
         cf = [f for f in r['crop_flags'] if f not in ('JOINED', 'DUPLICATE_PIECE', 'ORIENTATION_UNSURE', 'MANUAL_JOIN', 'MANUAL_CROP')]   # pieces the user joined / cut by hand were already checked by the user
         if cf and not corr.get('crop_ok'): flags = ['Check crop'] + flags
         if 'ORIENTATION_UNSURE' in r['crop_flags'] and not corr.get('crop_ok') and 'rotation' not in corr: flags = ['Check rotation'] + flags
-        if 'DUPLICATE_PIECE' in r['crop_flags'] and not corr.get('not_duplicate'): flags = flags + ['Possible duplicate']
         key = (r['merchant'], str(r['date']), r['total']); slip = is_slip(r, corr)
         dup_of = None
+        if 'DUPLICATE_PIECE' in r['crop_flags'] and not corr.get('not_duplicate') and not slip:
+            tw = piece_twin(r, recs, corr_all)          # the picture check alone often matches unrelated receipts (similar footers / QR codes)
+            if tw: flags = flags + ['Possible duplicate']; dup_of = tw
         if r['merchant'] and r['total'] is not None and key in seen and not slip and not corr.get('not_duplicate'): flags = flags + ['Possible duplicate']; dup_of = seen[key]
         if r['id'] in imgdup and not corr.get('not_duplicate'):
             o = byid[imgdup[r['id']][0]]; same = True
