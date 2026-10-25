@@ -1,5 +1,8 @@
 # Changes
 
+## 1.0.5
+- Possible duplicates: the copies are shown side by side in the picture area, each with Enlarge and Delete.
+
 ## 1.0.4
 - Possible duplicates: all copies are shown side by side, large, and you choose which to keep or delete (can be undone).
 
