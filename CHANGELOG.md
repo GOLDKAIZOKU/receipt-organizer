@@ -1,5 +1,8 @@
 # Changes
 
+## 1.0.3
+- Dates: just type the digits (13102026 or 131026); the slashes appear by themselves.
+
 ## 1.0.2
 - The update check no longer stops working when GitHub's hourly limit for your internet connection is reached.
 
