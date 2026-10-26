@@ -284,7 +284,7 @@ def pieces():
 def correct(body):
     p = os.path.join(STATE['out'], 'corrections.json'); c = json.load(open(p)) if os.path.exists(p) else {}
     cur = c.setdefault(body['id'], {})
-    for k in ('date', 'total', 'merchant', 'entity', 'category', 'subcategory', 'crop_ok', 'not_duplicate', 'tax_tag', 'hold', 'not_slip', 'kind', 'property'):
+    for k in ('date', 'total', 'merchant', 'entity', 'category', 'subcategory', 'crop_ok', 'not_duplicate', 'tax_tag', 'hold', 'not_slip', 'kind', 'property', 'slip_of', 'card_slip'):
         if k in body and body[k] not in (None, ''): cur[k] = clean_ent(body[k]) if k == 'entity' else body[k]
     if body.get('kind') == 'bill':                              # marked as a bill: it becomes a utility bill right away, with the type read from the page
         sub = None
@@ -303,7 +303,11 @@ def correct(body):
         except Exception: pass
         if cur.get('category') != 'Utilities': cur['category'] = 'Utilities'; cur['subcategory'] = body.get('subcategory') or sub or 'Other bills'
     if body.get('kind') == 'receipt' and cur.get('category') == 'Utilities': cur.pop('category', None); cur.pop('subcategory', None)
-    if body.get('not_slip_of'): cur['not_slip_of'] = sorted(set(cur.get('not_slip_of', [])) | {str(body['not_slip_of'])})   # 'not the same payment'
+    if body.get('not_slip_of'):                                  # 'not the same payment'
+        cur['not_slip_of'] = sorted(set(cur.get('not_slip_of', [])) | {str(body['not_slip_of'])})
+        if cur.get('slip_of') == str(body['not_slip_of']): cur.pop('slip_of', None)
+    if body.get('slip_of'):                                      # linked by hand: the other one is this receipt's card slip
+        cur['card_slip'] = True; cur['not_slip_of'] = [x for x in cur.get('not_slip_of', []) if x != body['slip_of']]
     json.dump(c, open(p, 'w'), ensure_ascii=False, indent=1)
     if body.get('property'):                                    # remember: this bill's account number belongs to that property
         try:

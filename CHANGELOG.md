@@ -1,5 +1,9 @@
 # Changes
 
+## 1.0.9
+- Card slips pair with their receipt even when a date was misread: same amount and similar shop name, up to a week apart.
+- New button "Link card slip… / Link receipt…" to pair them by hand when the automatic pairing does not find them.
+
 ## 1.0.8
 - A receipt and its bank card slip are saved as ONE picture (receipt left, slip right) in the organised folder, instead of two files.
 

@@ -162,22 +162,38 @@ def is_slip(r, corr): return bool((r.get('card_slip') or corr.get('card_slip')) 
 _GENERIC = {'sdn', 'bhd', 'the', 'and', 'enterprise', 'trading', 'restaurant', 'restoran', 'cafe', 'malaysia', 'store', 'shop', 'services', 'plt', 'kiara', 'bay'}
 def _words(s): return {w for w in re.findall(r'[a-z]{3,}', (s or '').lower()) if w not in _GENERIC}
 
+def _alike(a, b):
+    """Shop names that look alike even when misread: a shared word, or 5+ letters in a row in common (WATSONS / MATSON'S KUCHAI)."""
+    if _words(a) & _words(b): return True
+    x, y = re.sub(r'[^A-Z]', '', (a or '').upper()), re.sub(r'[^A-Z]', '', (b or '').upper())
+    if len(x) < 5 or len(y) < 5: return False
+    import difflib
+    m = difflib.SequenceMatcher(None, x, y).find_longest_match(0, len(x), 0, len(y))
+    return m.size >= 5
+
 def match_slips(recs, corr_all):
-    """Bank card slip -> the receipt / invoice for the same payment: same total, same day (or the day after), name agreeing when it can.
-    Only a clear single best match is paired; the user can say 'not the same payment' and it is never paired with that receipt again."""
+    """Bank card slip -> the receipt / invoice for the same payment.
+    1. Pairs the user made by hand (corrections: slip_of) always stand.
+    2. Same total and same day (or the day after); or same total, names alike and up to a week apart (a misread date).
+    Only a clear single best match is paired; 'not the same payment' is never paired again."""
     C = lambda r: corr_all.get(r['id'], {})
-    slips = [r for r in recs if is_slip(r, C(r))]
-    rc = [r for r in recs if not is_slip(r, C(r)) and r['total'] is not None and not C(r).get('hold')]
+    byid = {r['id']: r for r in recs}
     pairs = {}; taken = set()
+    for s in recs:                                                          # by hand
+        t = C(s).get('slip_of')
+        if t and t in byid and t not in taken and t != s['id']: pairs[s['id']] = t; taken.add(t)
+    slips = [r for r in recs if is_slip(r, C(r)) and r['id'] not in pairs]
+    rc = [r for r in recs if not is_slip(r, C(r)) and r['total'] is not None and not C(r).get('hold')]
     for s in sorted(slips, key=lambda r: r['id']):
         if s['total'] is None: continue
         no = set(C(s).get('not_slip_of', [])); cands = []
         for r in rc:
             if r['id'] in taken or r['id'] in no or abs(r['total'] - s['total']) > 0.005: continue
             dd = abs((s['date'] - r['date']).days) if s['date'] and r['date'] else None
-            if dd is not None and dd > 1: continue
-            sc = (2 if dd == 0 else 1 if dd == 1 else 0) + 3 * len(_words(s['merchant']) & _words(r['merchant']))
-            if dd is None and sc < 3: continue           # no date to compare: the names must agree
+            alike = _alike(s['merchant'], r['merchant'])
+            if dd is not None and dd > (7 if alike else 1): continue
+            sc = (2 if dd == 0 else 1 if dd == 1 else 0) + 3 * len(_words(s['merchant']) & _words(r['merchant'])) + (2 if alike else 0)
+            if dd is None and not alike: continue                           # no date to compare: the names must agree
             cands.append((sc, r['id']))
         cands.sort(reverse=True)
         if cands and (len(cands) == 1 or cands[0][0] > cands[1][0]): pairs[s['id']] = cands[0][1]; taken.add(cands[0][1])
