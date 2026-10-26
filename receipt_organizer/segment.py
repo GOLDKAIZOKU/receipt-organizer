@@ -157,6 +157,11 @@ def maybe_sideways(c):
 
 def upright(c):
     if c.shape[1] > c.shape[0]: c = cv2.rotate(c, cv2.ROTATE_90_CLOCKWISE)
+    v = ob.directions(c)                                                # Apple Vision: the way the characters run tells the way up
+    if v is not None and max(v) > 0:
+        k = int(np.argmax(v))
+        c = [c, cv2.rotate(c, cv2.ROTATE_90_CLOCKWISE), cv2.rotate(c, cv2.ROTATE_180), cv2.rotate(c, cv2.ROTATE_90_COUNTERCLOCKWISE)][k]
+        return deskew(c)
     if maybe_sideways(c):                                               # read it in all four directions; the one that reads best is upright
         cands = [c, cv2.rotate(c, cv2.ROTATE_90_CLOCKWISE), cv2.rotate(c, cv2.ROTATE_180), cv2.rotate(c, cv2.ROTATE_90_COUNTERCLOCKWISE)]
         sc = [score(x) for x in cands]; k = int(np.argmax(sc))
@@ -184,6 +189,10 @@ def split_mixed(d, min_h=220):
     for _, cy in sorted(cands, reverse=True)[:3]:
         top, bot = d[:cy], d[cy:]
         if min(top.shape[0], bot.shape[0]) < min_h: continue
+        vb, vt = ob.directions(bot), ob.directions(top)
+        if vb is not None and vt is not None:
+            if vb[2] > 30 and vb[2] > 2 * max(0, vb[0]) and vt[0] > 0 and vt[0] >= vt[2]: return top, cv2.rotate(bot, cv2.ROTATE_180), cy
+            continue
         s0, s1 = score(bot), score(cv2.rotate(bot, cv2.ROTATE_180))
         if s1 > max(150, 1.8 * s0) and score(top) >= 0.8 * score(cv2.rotate(top, cv2.ROTATE_180)):
             return top, cv2.rotate(bot, cv2.ROTATE_180), cy

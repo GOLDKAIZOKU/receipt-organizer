@@ -92,6 +92,34 @@ def _pick():
         raise RuntimeError('No OCR engine found: on Mac run setup_mac.command; on Windows use the downloaded app (it includes Windows OCR support).')
 
 def engine(): return _pick()[0]
+def _vision_forward(img):
+    """Apple Vision reads text in any direction and reports it as if upright, so how much it reads says nothing about which way
+    up a picture is. What does: in which direction a line's characters run across the picture. Returns (+) characters that run
+    left to right minus (-) those that run right to left."""
+    import Vision, Quartz
+    from Foundation import NSData
+    ok, buf = cv2.imencode('.png', img)
+    cg = Quartz.CGImageSourceCreateImageAtIndex(Quartz.CGImageSourceCreateWithData(NSData.dataWithBytes_length_(buf.tobytes(), len(buf)), None), 0, None)
+    req = Vision.VNRecognizeTextRequest.alloc().init(); req.setRecognitionLevel_(Vision.VNRequestTextRecognitionLevelAccurate)
+    req.setUsesLanguageCorrection_(False)
+    Vision.VNImageRequestHandler.alloc().initWithCGImage_options_(cg, None).performRequests_error_([req], None)
+    fwd = 0
+    for o in (req.results() or []):
+        c = o.topCandidates_(1)[0]; s = str(c.string())
+        if len(s.strip()) < 4 or c.confidence() < .5: continue
+        a, _ = c.boundingBoxForRange_error_((0, 1), None); b, _ = c.boundingBoxForRange_error_((len(s) - 1, 1), None)
+        if a is not None and b is not None: fwd += len(s) if b.boundingBox().origin.x > a.boundingBox().origin.x else -len(s)
+    return fwd
+
+def directions(img):
+    """[as is, turned clockwise, turned 180, turned anticlockwise] -> how well each one reads left to right, or None when the
+    engine cannot tell (then the caller compares how much text each direction yields instead)."""
+    if _pick()[0] != 'apple-vision': return None
+    try:
+        return [_vision_forward(x) for x in (img, cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE), cv2.rotate(img, cv2.ROTATE_180), cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE))]
+    except Exception:
+        return None
+
 
 TALL = 3.0     # taller than this many widths = a long receipt: read it in slices (the engines lose accuracy on very tall pictures)
 def lines(img):
