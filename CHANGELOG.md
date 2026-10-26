@@ -1,5 +1,9 @@
 # Changes
 
+## 1.0.12
+- Pages scanned turned sideways (90 degrees) are now turned upright: when the lines look like they might run top to bottom, the piece is read in all four directions and the best one is kept.
+- A receipt and a card slip touching end to end, with the slip upside down, are cut into two pieces (the slip turned the right way), so they are paired and shown side by side.
+
 ## 1.0.11
 - IMPORTANT fix: importing a new folder of scans now ADDS to the receipts already in the results folder instead of replacing them (the list is backed up before every import). Re-importing the same scan file only replaces that file's pieces.
 - Each receipt keeps the owner it was imported with.
