@@ -1,5 +1,8 @@
 # Changes
 
+## 1.0.13
+- Mac: which way up a piece is now comes from the direction the characters run (Apple Vision reads text even upside down or sideways, so the old "how much can be read" test could not tell). Sideways pages and upside-down slips are now turned correctly on Mac too.
+
 ## 1.0.12
 - Pages scanned turned sideways (90 degrees) are now turned upright: when the lines look like they might run top to bottom, the piece is read in all four directions and the best one is kept.
 - A receipt and a card slip touching end to end, with the slip upside down, are cut into two pieces (the slip turned the right way), so they are paired and shown side by side.

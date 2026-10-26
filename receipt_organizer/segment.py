@@ -160,6 +160,7 @@ def upright(c):
     v = ob.directions(c)                                                # Apple Vision: the way the characters run tells the way up
     if v is not None and max(v) > 0:
         k = int(np.argmax(v))
+        if k and v[0] > 0 and v[k] < 1.5 * v[0] + 50: k = 0                # turn only when another direction is clearly better
         c = [c, cv2.rotate(c, cv2.ROTATE_90_CLOCKWISE), cv2.rotate(c, cv2.ROTATE_180), cv2.rotate(c, cv2.ROTATE_90_COUNTERCLOCKWISE)][k]
         return deskew(c)
     if maybe_sideways(c):                                               # read it in all four directions; the one that reads best is upright
