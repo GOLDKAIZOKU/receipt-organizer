@@ -4,6 +4,7 @@
 Originals are only ever READ. Nothing is deleted. Your corrections in corrections.json always win over OCR/AI."""
 import argparse, csv, datetime, json, os, re, shutil, statistics, sys, threading, time
 import cv2
+import numpy as np
 from . import bills as BL, dupes,  ocr_backend as ob, segment, fields as F, ollama_reader as OR, catalog, stitch, orient
 
 EXTS = ('.jpg', '.jpeg', '.png')
@@ -126,6 +127,21 @@ def run(inp, out, entity, model='qwen3.5:9b', use_ai=True, log=print):
 
 FIELDSV = 1  # bump when shop-name / date reading improves, so older readings with no shop or date are read again
 SLIPV = 2   # bump when slip reading improves, so older readings are looked at again
+def _img_of(work, r):
+    """The current picture of a piece (with the user's rotations)."""
+    p = os.path.join(work, r['id'] + '.jpg')
+    return p if os.path.exists(p) else r['crop_path']
+
+def side_by_side(left, right, dst, gap=40):
+    """One picture: left image and right image next to each other, tops aligned, on white. -> True when written."""
+    a, b = cv2.imread(left), cv2.imread(right)
+    if a is None or b is None: return False
+    if b.shape[0] > 1.6 * a.shape[0] or b.shape[1] > 1.6 * a.shape[1]:          # a much bigger scan of the slip: bring it to the receipt's scale
+        k = min(1.6 * a.shape[0] / b.shape[0], 1.6 * a.shape[1] / b.shape[1]); b = cv2.resize(b, None, fx=k, fy=k, interpolation=cv2.INTER_AREA)
+    H = max(a.shape[0], b.shape[0]); W = a.shape[1] + gap + b.shape[1]
+    canvas = np.full((H, W, 3), 255, np.uint8); canvas[:a.shape[0], :a.shape[1]] = a; canvas[:b.shape[0], a.shape[1] + gap:] = b
+    return bool(cv2.imwrite(dst, canvas, [cv2.IMWRITE_JPEG_QUALITY, 92]))
+
 def piece_twin(r, recs, corr_all):
     """The other copy of a piece flagged 'scanned twice': the piece it was matched with, or any other receipt with the same total on the
     same day (or the same shop and day when no total was read). None when there is no such receipt, i.e. the flag was a false alarm."""
@@ -322,12 +338,13 @@ def _finalize(out, entity=None, log=print):
                          source_scan=os.path.basename(r['source_scan']), notes=' | '.join(r['notes']), ocr_date=str(r['ocr_date']) if r['ocr_date'] else None,
                          ai_date=str(r['ai_date']) if r['ai_date'] else None, ocr_total=r['ocr_total'], ai_total=r['ai_total'], crop_flags=r['crop_flags'], ai_transcripts=r['ai_evidence']))
     at = {x['id']: i for i, x in enumerate(rows)}
-    for sid, rid in sorted(pair.items(), key=lambda kv: -at[kv[1]]):     # each matched slip: same folder as its receipt, same name + _card_slip
-        r = byid[sid]; inv = rows[at[rid]]; ipath = os.path.join(out, inv['file']); stem = os.path.splitext(os.path.basename(ipath))[0]
-        path = os.path.join(os.path.dirname(ipath), stem + '_card_slip.jpg'); shutil.copy2(r['crop_path'], path); d = r['date']
-        links[os.path.relpath(path, out)] = dict(id=sid, card_slip_of=rid, source_scan=r['source_scan'], crop_box=r['box'], derived_file=path, merchant=r['merchant'], date=str(d) if d else None,
-                       total_myr=r['total'], status=r['status'], note='bank card slip for the receipt next to it; not counted again')
-        rows.insert(at[rid] + 1, dict(id=sid, file=os.path.relpath(path, out), entity=inv['entity'], merchant=r['merchant'], date=str(d) if d else None, total_myr=r['total'], category=inv['category'],
+    for sid, rid in sorted(pair.items(), key=lambda kv: -at[kv[1]]):     # each matched slip is stored in ONE picture with its receipt: receipt left, slip right
+        r = byid[sid]; inv = rows[at[rid]]; ipath = os.path.join(out, inv['file']); d = r['date']
+        if not side_by_side(_img_of(work, byid[rid]), _img_of(work, r), ipath): shutil.copy2(r['crop_path'], os.path.splitext(ipath)[0] + '_card_slip.jpg')
+        lk = links.get(inv['file'])
+        if lk is not None: lk['card_slip'] = dict(id=sid, source_scan=r['source_scan'], crop_box=r['box'], merchant=r['merchant'], date=str(d) if d else None, total_myr=r['total'],
+                                                  note='bank card slip for this receipt, on the right of the same picture; not counted again')
+        rows.insert(at[rid] + 1, dict(id=sid, file=inv['file'], entity=inv['entity'], merchant=r['merchant'], date=str(d) if d else None, total_myr=r['total'], category=inv['category'],
                          subcategory=inv['subcategory'], tax_tag='', hold=False, duplicate=False, card_slip=None, card_slip_of=rid, is_slip=True, is_bill=inv.get('is_bill', False),
                          date_status=r['status']['date'], total_status=r['status']['total'], merchant_status=r['status']['merchant'], review='',
                          source_scan=os.path.basename(r['source_scan']), notes=' | '.join(r['notes'] + [f'Card slip for {inv["merchant"]} {inv["date"]} RM {inv["total_myr"]}']), ocr_date=str(r['ocr_date']) if r['ocr_date'] else None,

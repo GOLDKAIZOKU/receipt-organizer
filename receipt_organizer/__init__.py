@@ -1,4 +1,4 @@
-__version__ = '1.0.7'
+__version__ = '1.0.8'
 REPO = 'GOLDKAIZOKU/receipt-organizer'      # where new versions are published (GitHub Releases)
 
 try:

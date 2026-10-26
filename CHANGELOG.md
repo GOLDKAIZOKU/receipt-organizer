@@ -1,5 +1,8 @@
 # Changes
 
+## 1.0.8
+- A receipt and its bank card slip are saved as ONE picture (receipt left, slip right) in the organised folder, instead of two files.
+
 ## 1.0.7
 - A receipt and its bank card slip are shown side by side in the picture area; click either to enlarge it without leaving the page.
 
