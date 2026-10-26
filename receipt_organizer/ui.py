@@ -107,6 +107,11 @@ def manual_join(ids):
         im = cv2.imread(os.path.join(w, i + '.jpg'))
         if im is None: raise ValueError(f'Cannot read piece {i}.')
         imgs.append(im)
+    slips = [i for i, im in zip(ids, imgs) if _is_card_slip(by[i], im)]
+    rest = [i for i in ids if i not in slips]
+    if slips and rest:                                                 # a card slip is not part of the receipt: pair it, shown side by side
+        rid = rest[0] if len(rest) == 1 else manual_join(rest)
+        _pair(slips, rid); return rid
     W = int(np.median([im.shape[1] for im in imgs]))
     imgs = [cv2.resize(im, (W, max(1, int(im.shape[0] * W / im.shape[1]))), interpolation=cv2.INTER_CUBIC) if im.shape[1] != W else im for im in imgs]
     joined = np.vstack(imgs); nid = '__'.join(ids)
@@ -126,6 +131,23 @@ def manual_join(ids):
     pos = min(recs.index(by[i]) for i in ids); recs = [r for r in recs if r['id'] not in ids]; recs.insert(pos, rec); saved['records'] = recs
     json.dump(saved, open(rp, 'w'), ensure_ascii=False, indent=1, default=str)
     core.finalize(STATE['out'], log=lambda m: None); return nid
+
+def _is_card_slip(r, im):
+    from . import fields as F
+    p = os.path.join(STATE['out'], 'corrections.json'); c = (json.load(open(p)) if os.path.exists(p) else {}).get(r['id'], {})
+    if c.get('not_slip'): return False
+    if r.get('card_slip') or c.get('card_slip'): return True
+    try: return bool(F.card_slip([core.ob.text(im)])[0])
+    except Exception: return False
+
+def _pair(slips, rid):
+    """Each slip becomes the card slip of receipt rid (same as linking by hand)."""
+    p = os.path.join(STATE['out'], 'corrections.json'); c = json.load(open(p)) if os.path.exists(p) else {}
+    for s in slips:
+        cur = c.setdefault(s, {}); cur['slip_of'] = rid; cur['card_slip'] = True; cur.pop('not_slip', None)
+        cur['not_slip_of'] = [x for x in cur.get('not_slip_of', []) if x != rid]
+    json.dump(c, open(p, 'w'), ensure_ascii=False, indent=1)
+    core.finalize(STATE['out'], log=lambda m: None)
 
 def start_auto_unjoin(nid):
     """Undo a join the app made by itself. Its pieces were never saved on their own, so each one is cut again from its original scan

@@ -1,5 +1,8 @@
 # Changes
 
+## 1.0.14
+- "Join other pieces": when one of the picked pieces is a bank card slip, it is not stacked under the receipt any more; it is paired with the receipt as its card slip and shown and stored side by side.
+
 ## 1.0.13
 - Mac: which way up a piece is now comes from the direction the characters run (Apple Vision reads text even upside down or sideways, so the old "how much can be read" test could not tell). Sideways pages and upside-down slips are now turned correctly on Mac too.
 
