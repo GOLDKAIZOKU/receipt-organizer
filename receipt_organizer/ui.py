@@ -75,13 +75,21 @@ def rotate(cid, deg):
     if not os.path.exists(f): return
     bak = f[:-4] + '.original.jpg'
     if not os.path.exists(bak): shutil.copy2(f, bak)                 # the first version is kept, nothing is lost
-    im = cv2.imread(f); code = {90: cv2.ROTATE_90_CLOCKWISE, 180: cv2.ROTATE_180, 270: cv2.ROTATE_90_COUNTERCLOCKWISE}.get(deg % 360)
-    if code is None: return
-    cv2.imwrite(f, cv2.rotate(im, code), [cv2.IMWRITE_JPEG_QUALITY, 95])
+    from . import segment
+    im = cv2.imread(f)
+    if deg == 'auto':                                                  # straighten a slanted receipt by its printed lines
+        a, sure = segment.skew_angle(im)
+        if abs(a) < 0.4 or not sure: return 'straight' if abs(a) < 0.4 else 'unsure'
+        out = segment.trim_white(segment.rotate_any(im, a)); deg = -a
+    else:
+        deg = float(deg); code = {90: cv2.ROTATE_90_CLOCKWISE, 180: cv2.ROTATE_180, 270: cv2.ROTATE_90_COUNTERCLOCKWISE}.get(int(deg) % 360) if deg == int(deg) and int(deg) % 90 == 0 else None
+        out = cv2.rotate(im, code) if code is not None else segment.trim_white(segment.rotate_any(im, -deg))   # small turns: clockwise is positive
+    cv2.imwrite(f, out, [cv2.IMWRITE_JPEG_QUALITY, 95])
     p = os.path.join(STATE['out'], 'corrections.json'); c = json.load(open(p)) if os.path.exists(p) else {}
-    cur = c.setdefault(cid, {}); cur['rotation'] = (int(cur.get('rotation', 0)) + deg) % 360
+    cur = c.setdefault(cid, {}); cur['rotation'] = round((float(cur.get('rotation', 0)) + deg) % 360, 1)
     json.dump(c, open(p, 'w'), ensure_ascii=False, indent=1)
     core.finalize(STATE['out'], log=lambda m: None)
+    return 'ok'
 
 def _work(): return os.path.join(STATE['out'], '.work')
 
@@ -484,7 +492,7 @@ class H(BaseHTTPRequestHandler):
         if p == '/api/undelete':
             try: undelete(body.get('ids', [])); return self._send(200, {'rows': view()})
             except Exception as e: return self._send(400, {'error': str(e)})
-        if p == '/api/rotate': rotate(body['id'], int(body['deg'])); return self._send(200, {'rows': view()})
+        if p == '/api/rotate': res = rotate(body['id'], body['deg'] if body.get('deg') == 'auto' else float(body['deg'])); return self._send(200, {'rows': view(), 'result': res})
         if p == '/api/correct': correct(body); return self._send(200, {'rows': view()})
         if p == '/api/entities':
             names = []

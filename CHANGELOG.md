@@ -1,5 +1,9 @@
 # Changes
 
+## 1.0.10
+- Receipts scanned at a slant (up to 45 degrees) are straightened automatically, and the extra white border is trimmed.
+- New buttons under the picture: Straighten (automatic), and fine turns of 1 and 5 degrees.
+
 ## 1.0.9
 - Card slips pair with their receipt even when a date was misread: same amount and similar shop name, up to a week apart.
 - New button "Link card slip… / Link receipt…" to pair them by hand when the automatic pairing does not find them.

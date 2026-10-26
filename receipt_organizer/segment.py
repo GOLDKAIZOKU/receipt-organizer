@@ -85,17 +85,55 @@ def score(img):
                 elif len(w) >= 3 and l['conf'] > .55: tot += 3
     return tot
 
-def deskew(c, lim=8.0):
-    g = cv2.cvtColor(c, cv2.COLOR_BGR2GRAY); ink = (g < 170).astype(np.uint8); h, w = ink.shape
-    if max(h, w) > 1200: ink = cv2.resize(ink, (w // 3, h // 3), interpolation=cv2.INTER_AREA)
-    hh, ww = ink.shape; best = (0, -1)
-    for a in np.arange(-lim, lim + 0.01, 0.25):
-        v = cv2.warpAffine(ink, cv2.getRotationMatrix2D((ww / 2, hh / 2), a, 1), (ww, hh)).sum(1).astype(float).var()
-        if v > best[1]: best = (a, v)
-    a = best[0]
+def skew_angle(c, lim=45.0):
+    """Tilt of the printed lines, in degrees (rotate by this to make them level), searched over +-lim.
+    Measured inside round patches of the receipt (so a tall, narrow receipt's outline does not bias it), scoring how sharply
+    the row profile alternates between text lines and gaps. Coarse 1-degree steps, then 0.2 around the best.
+    -> (angle, sure) ; sure=False when the text gives no clear answer."""
+    g = cv2.cvtColor(c, cv2.COLOR_BGR2GRAY) if c.ndim == 3 else c
+    ink = (g < 170).astype(np.float32); h, w = ink.shape; k = 900 / max(h, w)
+    if k < 1: ink = cv2.resize(ink, (max(1, int(w * k)), max(1, int(h * k))), interpolation=cv2.INTER_AREA)
+    if ink.sum() < 50: return 0.0, False
+    hh, ww = ink.shape; cx = ww // 2; R = max(8, min(hh, ww) // 2)
+    centers = [hh // 2] if hh < 1.6 * ww else [int(hh * f) for f in (0.25, 0.5, 0.75)]
+    patches = []
+    for cy in centers:
+        sub = ink[max(0, cy - R):min(hh, cy + R), max(0, cx - R):min(ww, cx + R)]
+        yy, xx = np.mgrid[0:sub.shape[0], 0:sub.shape[1]]
+        patches.append(sub * (((yy - sub.shape[0] / 2) ** 2 + (xx - sub.shape[1] / 2) ** 2) <= (min(sub.shape) / 2) ** 2))
+    def score(a):
+        t = 0.0
+        for d in patches:
+            r = cv2.warpAffine(d, cv2.getRotationMatrix2D((d.shape[1] / 2, d.shape[0] / 2), a, 1), (d.shape[1], d.shape[0])).sum(1)
+            t += float((np.diff(r) ** 2).sum())
+        return t
+    coarse = [(score(a), a) for a in np.arange(-lim, lim + 0.01, 1.0)]
+    vb, ab = max(coarse)
+    vb, ab = max([(score(a), a) for a in np.arange(ab - 1.0, ab + 1.01, 0.2)])
+    vals = sorted(x for x, _ in coarse); med = vals[len(vals) // 2] or 1.0
+    return float(round(ab, 1)), bool(vb > 1.3 * med)
+
+def rotate_any(c, a):
+    """Turn by any angle (degrees, counter-clockwise like OpenCV), growing the picture so no corner is cut; new corners are white."""
+    h, w = c.shape[:2]; M = cv2.getRotationMatrix2D((w / 2, h / 2), a, 1)
+    cos, sin = abs(M[0, 0]), abs(M[0, 1]); W, H = int(h * sin + w * cos), int(h * cos + w * sin)
+    M[0, 2] += W / 2 - w / 2; M[1, 2] += H / 2 - h / 2
+    return cv2.warpAffine(c, M, (W, H), flags=cv2.INTER_CUBIC, borderValue=(255, 255, 255))
+
+def trim_white(c, margin=24):
+    """Cut away plain white border (after turning a slanted receipt there is a lot of it)."""
+    g = cv2.cvtColor(c, cv2.COLOR_BGR2GRAY) if c.ndim == 3 else c
+    ys, xs = np.nonzero(g < 215)
+    if len(ys) < 50: return c
+    y0, y1 = max(0, ys.min() - margin), min(g.shape[0], ys.max() + margin); x0, x1 = max(0, xs.min() - margin), min(g.shape[1], xs.max() + margin)
+    return c[y0:y1, x0:x1]
+
+def deskew(c, lim=45.0):
+    """Straighten a receipt that was scanned at a slant (up to 45 degrees)."""
+    a, sure = skew_angle(c, lim)
     if abs(a) < 0.4: return c, 0.0
-    if abs(a) >= lim - 0.25: return c, 'NEEDS_MANUAL_ROTATION'
-    return cv2.warpAffine(c, cv2.getRotationMatrix2D((w / 2, h / 2), a, 1), (w, h), flags=cv2.INTER_CUBIC, borderValue=(255, 255, 255)), a
+    if not sure or abs(a) >= lim - 0.5: return c, 'NEEDS_MANUAL_ROTATION'
+    return trim_white(rotate_any(c, a)), a
 
 def upright(c):
     if c.shape[1] > c.shape[0]: c = cv2.rotate(c, cv2.ROTATE_90_CLOCKWISE)
