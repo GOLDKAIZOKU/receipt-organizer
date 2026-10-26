@@ -1,5 +1,9 @@
 # Changes
 
+## 1.0.11
+- IMPORTANT fix: importing a new folder of scans now ADDS to the receipts already in the results folder instead of replacing them (the list is backed up before every import). Re-importing the same scan file only replaces that file's pieces.
+- Each receipt keeps the owner it was imported with.
+
 ## 1.0.10
 - Receipts scanned at a slant (up to 45 degrees) are straightened automatically, and the extra white border is trimmed.
 - New buttons under the picture: Straighten (automatic), and fine turns of 1 and 5 degrees.

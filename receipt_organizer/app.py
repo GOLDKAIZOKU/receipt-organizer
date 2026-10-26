@@ -119,8 +119,17 @@ def run(inp, out, entity, model='qwen3.5:9b', use_ai=True, log=print):
         rec = read_fields(it['crop'], model, use_ai, log)
         rec.update(id=cid, source_scan=it['sources'][0], sources=it['sources'], box=it['boxes'][0], boxes=it['boxes'], crop_flags=it['flags'], crop_path=cp, dup_piece_of=it.get('dup_piece_of', []))
         recs.append(rec); log(f'  {cid}: {rec["merchant"]} | ocr {rec["ocr_date"]} {rec["ocr_total"]} | ai {rec["ai_date"]} {rec["ai_total"]}  ({time.time()-t0:.0f}s)')
-    ser = [dict(r, ocr_date=str(r['ocr_date']) if r['ocr_date'] else None, ai_date=str(r['ai_date']) if r['ai_date'] else None) for r in recs]
-    json.dump(dict(model=model if use_ai else None, entity=entity, records=ser), open(os.path.join(work, 'records.json'), 'w'), ensure_ascii=False, indent=1, default=str)
+    ser = [dict(r, entity=entity, ocr_date=str(r['ocr_date']) if r['ocr_date'] else None, ai_date=str(r['ai_date']) if r['ai_date'] else None) for r in recs]
+    rp = os.path.join(work, 'records.json'); keep = []
+    if os.path.exists(rp):                          # ADD to what is already there; only pieces of the same scan files are replaced
+        with _FLOCK:
+            old = json.load(open(rp)); shutil.copy2(rp, os.path.join(work, 'records.before_import_' + time.strftime('%Y%m%d_%H%M%S') + '.json'))
+        new_scans = {os.path.abspath(s) for r in ser for s in r.get('sources', [r['source_scan']])}
+        for r in old.get('records', []):
+            r.setdefault('entity', old.get('entity', entity))            # older records keep the owner they were imported with
+            if not ({os.path.abspath(s) for s in r.get('sources', [r['source_scan']])} & new_scans): keep.append(r)
+        log(f'Kept {len(keep)} receipts from earlier imports; added {len(ser)} new.')
+    with _FLOCK: json.dump(dict(model=model if use_ai else None, entity=entity, records=keep + ser), open(rp, 'w'), ensure_ascii=False, indent=1, default=str)
     rows = finalize(out, entity, log)
     log(f'\nDone: {len(rows)} receipts from {len(scans)} scans.')
     return rows
@@ -314,7 +323,7 @@ def _finalize(out, entity=None, log=print):
     pair = match_slips(recs, corr_all); slip_for = {v: k for k, v in pair.items()}
     for r in recs:
         if r['id'] in pair: continue                                     # filed next to its receipt below
-        corr = corr_all.get(r['id'], {}); ent = corr.get('entity', entity); flags = decide(r, corr, med)
+        corr = corr_all.get(r['id'], {}); ent = corr.get('entity', r.get('entity') or entity); flags = decide(r, corr, med)
         cf = [f for f in r['crop_flags'] if f not in ('JOINED', 'DUPLICATE_PIECE', 'ORIENTATION_UNSURE', 'MANUAL_JOIN', 'MANUAL_CROP')]   # pieces the user joined / cut by hand were already checked by the user
         if cf and not corr.get('crop_ok'): flags = ['Check crop'] + flags
         if 'ORIENTATION_UNSURE' in r['crop_flags'] and not corr.get('crop_ok') and 'rotation' not in corr: flags = ['Check rotation'] + flags

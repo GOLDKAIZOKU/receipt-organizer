@@ -118,7 +118,7 @@ def manual_join(ids):
         for x in by[i].get('sources', [by[i]['source_scan']]):
             if x not in srcs: srcs.append(x)
         boxes += by[i].get('boxes', [by[i]['box']])
-    rec.update(id=nid, source_scan=srcs[0], sources=srcs, box=boxes[0], boxes=boxes, crop_flags=['JOINED', 'MANUAL_JOIN'], crop_path=cp)
+    rec.update(id=nid, source_scan=srcs[0], sources=srcs, box=boxes[0], boxes=boxes, crop_flags=['JOINED', 'MANUAL_JOIN'], crop_path=cp, entity=by[ids[0]].get('entity'))
     mj = os.path.join(w, 'manual_joins.json'); m = json.load(open(mj)) if os.path.exists(mj) else {}
     m[nid] = dict(pieces=ids, originals=[by[i] for i in ids], made=datetime.datetime.now().isoformat(timespec='seconds'))
     json.dump(m, open(mj, 'w'), ensure_ascii=False, indent=1, default=str)
@@ -151,7 +151,7 @@ def start_auto_unjoin(nid):
                 if model: c = orient.fix(c, model)[0]
                 cp = os.path.join(w, pid + '.jpg'); cv2.imwrite(cp, c, [cv2.IMWRITE_JPEG_QUALITY, 95])
                 rec = core.read_fields(c, model, bool(model), lambda m: None)
-                rec.update(id=pid, source_scan=src, sources=[src], box=[x0, y0, x1, y1], boxes=[[x0, y0, x1, y1]], crop_flags=['UNJOINED'], crop_path=cp); new.append(rec)
+                rec.update(id=pid, source_scan=src, sources=[src], box=[x0, y0, x1, y1], boxes=[[x0, y0, x1, y1]], crop_flags=['UNJOINED'], crop_path=cp, entity=r0.get('entity')); new.append(rec)
             cur = json.load(open(rp)); recs = cur['records']; pos = next(i for i, r in enumerate(recs) if r['id'] == nid)
             shutil.copy2(rp, os.path.join(w, 'records.before_unjoin_' + time.strftime('%Y%m%d_%H%M%S') + '.json'))
             ap = os.path.join(w, 'auto_unjoins.json'); a = json.load(open(ap)) if os.path.exists(ap) else {}
@@ -213,6 +213,7 @@ def start_recrop(cid, boxes):
     def go():
         try:
             model = saved.get('model'); stem = os.path.splitext(os.path.basename(scan))[0]; ts = time.strftime('%H%M%S'); new = []
+            ent0 = next((r.get('entity') for r in saved['records'] if _editable(r, scan) and r.get('entity')), None)
             keep = {tuple(r['box']): r['id'] for r in saved['records'] if _editable(r, scan)}      # unchanged boxes: keep that receipt as it is
             for k, (x0, y0, x1, y1) in enumerate(clean, 1):
                 if (x0, y0, x1, y1) in keep: new.append(keep[(x0, y0, x1, y1)]); j['log'].append(f'[{k}/{len(clean)}] unchanged, kept'); continue
@@ -221,7 +222,7 @@ def start_recrop(cid, boxes):
                 if model: c = orient.fix(c, model)[0]
                 nid = f'{stem}_m{ts}_{k}'; cp = os.path.join(w, nid + '.jpg'); cv2.imwrite(cp, c, [cv2.IMWRITE_JPEG_QUALITY, 95])
                 rec = core.read_fields(c, model, bool(model), lambda m: None)
-                rec.update(id=nid, source_scan=scan, sources=[scan], box=[x0, y0, x1, y1], boxes=[[x0, y0, x1, y1]], crop_flags=['MANUAL_CROP'], crop_path=cp)
+                rec.update(id=nid, source_scan=scan, sources=[scan], box=[x0, y0, x1, y1], boxes=[[x0, y0, x1, y1]], crop_flags=['MANUAL_CROP'], crop_path=cp, entity=ent0)
                 new.append(rec); j['log'].append(f'   {rec["merchant"] or "?"} | {rec["ocr_date"] or rec["ai_date"] or "no date"} | {rec["ocr_total"] or rec["ai_total"] or "?"}  ({time.time()-t0:.0f}s)')
             rp = os.path.join(w, 'records.json'); cur = json.load(open(rp)); recs = cur['records']          # re-read: nothing else may have changed meanwhile, but be safe
             byid = {r['id']: r for r in recs}; new = [byid[x] if isinstance(x, str) else x for x in new if not isinstance(x, str) or x in byid]
